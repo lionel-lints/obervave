@@ -6,6 +6,10 @@ differently. The SMK-37 build is the same synth, the same sounds and the same sc
 controls put to work: the 16 pads are the step sequencer, the faders reach the filter and the effects, the wheels
 bend and add vibrato, and the 37 keys play with velocity.
 
+> **Tested on real units:** an SMK-37 Pro (by genkigenki) and an SMK-37 Elite. This build is made with the
+> [fm1-to-smk37](https://github.com/genkigenki/fm1-to-smk37) kit and its reference board layer. Make a **full flash
+> backup** (below) before you install it, and please report what works and what does not.
+
 ## Packages and models
 
 | Your keyboard | Package | Identity |
