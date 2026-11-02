@@ -20,6 +20,7 @@ run() { echo "== $1"; shift; "$@" || fail=1; }
 
 run "FM-1 app on the host: the default script plays, screens and sound" sh tests/run_host.sh
 run "SMK-37 app on the host: the default script" env BOARD=smk37 sh tests/run_host.sh
+run "MIDI clock: the beats and the tracks stay on the master's quarters for minutes (no drift)" python3 tests/clock_sync_test.py
 run "SMK-37 mapping: step pads, REC pads, fader banks, wheels, outer keys" python3 tests/smk_ui_test.py
 run "flash saves wait for real silence (an erase stops the audio ~50 ms): effect tails too, never lost" python3 tests/quiet_save_test.py
 run "keys held through a program change to MONO / UNISON / the arp: let go, no note hangs" python3 tests/held_switch_test.py
