@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only
  * SMK-37 Pro port: Copyright (C) 2026 M. Geisler (genkigenki/makkuro)
  * (from genkigenki/sloop-fm1 smk37; OberVave: +-2 semitones, its range the program's BEND, obv_smk.h) */
-/* The SMK-37 Pro's pitch wheel as a bend (OberVave: obv_smk.h smk_wheels, into the engine's ctl_bend):
+/* The SMK-37 Pro's pitch wheel as a bend (OberVave: obv_smk.h smk_wheels, into the engine's ctl_bend_p by wheel_route.h):
  * raw ADC reading -> 1/4096 semitone, +-SMK_PW_ST semitones. Self-calibrating: the rest (centre) is the first
  * reading, the range grows to what the wheel has reached, a dead band of SMK_PW_DEAD around the centre.
  * While the wheel rests in the dead band the centre follows a slow drift, at most one step per SMK_PW_DRIFT_MS

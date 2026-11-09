@@ -76,10 +76,10 @@ static void note_event_p(uint32_t part, uint32_t on, uint32_t note, uint32_t vel
 static void note_event(uint32_t on, uint32_t note, uint32_t vel) { note_event_p(0, on, note, vel); }
 
 /* the controllers (main loop writes) */
-static volatile int32_t ctl_bend;               /* -8192..8191 */
+static volatile int32_t ctl_bend_p[NPART];      /* each track's pitch bend, -8192..8191 (wheel_route.h: the wheels go to a track) */
 static volatile uint32_t ctl_sustain, ctl_hold, ctl_cc7 = 127;   /* ctl_hold: bit p = sound p's HOLD */
 #if BOARD_SMK37
-static volatile int32_t ctl_vib;                /* the SMK-37's mod wheel 0..127: a vibrato from the LFO, up to +-1/2 semitone */
+static volatile int32_t ctl_vib_p[NPART];       /* each track's SMK-37 mod wheel 0..127: a vibrato from the LFO, up to +-1/2 semitone */
 #endif
 static volatile int32_t ctl_tune8;              /* global tune, Q8 semitones */
 static volatile uint32_t ctl_tempo = 120, ctl_ext_quarter;   /* MIDI clock: frames per quarter, 0 = none */
@@ -593,7 +593,7 @@ static void block_globals(part_t *g)            /* a sound's derived numbers, on
     d = pv[P_LFO_PWM]; g->lfo_pwd = (d * d) >> 7;
     g->lfo_ad = pv[P_LFO_AMP];
     g->wheel_q = pv[P_MOD_DEPTH];               /* the knob and the mod wheel (CC 1) are the same value */
-    g->bend8 = (ctl_bend * pv[P_BEND] * 256) >> 13;
+    g->bend8 = (ctl_bend_p[(uint32_t)(g - pt) % NPART] * pv[P_BEND] * 256) >> 13;   /* (its own track's bend) */
     g->env_o2 = (int32_t)pv[P_ENV_O2] - 64;
     g->det_fine8 = ((int32_t)pv[P_O2_FINE] - 64) * 2;
     d = pv[P_O1_LVL]; g->lvl1 = (d * d) >> 7;
@@ -664,7 +664,7 @@ static void voice_block(voice_t *v, uint32_t card)
     p8 = (v->pitch16 >> 8) + g->bend8 + ctl_tune8 + v->det8 + ((VINT_TUNE8[card % NCARD] * vint) >> 7) + ((v->drift * vint) >> 10);
     p8 += (lfo * g->wheel_q * 4) >> 15;         /* the wheel's vibrato */
 #if BOARD_SMK37
-    p8 += (lfo * ctl_vib) >> 15;                /* the SMK-37's mod wheel: pitch only, gentle */
+    p8 += (lfo * ctl_vib_p[v->part % NPART]) >> 15;   /* the SMK-37's mod wheel on its track: pitch only, gentle */
 #endif
     lfo_to = (lfo * g->lfo_pd * 24) >> 15;
     p1 = p8 + (pv[P_LFO_PITCH_TO] != TO_O2 ? lfo_to : 0);

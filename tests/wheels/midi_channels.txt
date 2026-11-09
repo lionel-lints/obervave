@@ -1,0 +1,20 @@
+# any board: MIDI channel 1 set (GLOBAL page, MIDI CH): channel 1 bends the picked track, 2-4 their own tracks B-D
+2900 btn GLOBE
+3000 enc MIDICH 1
+3100 midi 0xC0 10 0
+3100 midi 0xC1 10 0
+3100 midi 0xC2 10 0
+3100 midi 0xC3 10 0
+3300 midi 0x90 60 100
+3300 midi 0x91 64 100
+3300 midi 0x92 67 100
+3300 midi 0x93 71 100
+3800 wheels
+3900 midi 0xE2 0 96
+4100 wheels
+4200 midi 0xE2 0 64
+4300 midi 0xE0 0 32
+4500 wheels
+4600 midi 0xE0 0 64
+4800 wheels
+4900 end

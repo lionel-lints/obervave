@@ -4,7 +4,8 @@
 outer keys, MIDI notes on several channels, program changes, K3 track, K4 program, octave, MODE / ARP / VOICES by CC,
 the sustain pedal, the pads, the SEQ / PARA / GLOBE / BT / FX layers held), then everything let go. The rule: with no
 key and no MIDI note down, no sustain, no HOLD and the sequencer stopped, no voice may still be gated, and no sound may
-still list a held key. A failing scenario is run again on its own from power-on and shrunk to the fewest events.
+still list a held key; with every wheel and MIDI bend back at rest, no track may stay bent or keep a vibrato. A
+failing scenario is run again on its own from power-on and shrunk to the fewest events.
 
   fuzz_notes.py [--n 300] [--seed 1] [--keep DIR]     exit 1 when anything hangs (the repros in DIR, default build/fuzz)
 """
@@ -52,14 +53,18 @@ def scenario(rng):
         elif r < .79: ev.append((t, f"midi 0xb0 {CC['P_UNI_N']} {rng.randrange(128)}"))
         elif r < .84: ev.append((t, f"midi 0xb0 64 {rng.choice((0, 127))}"))                     # sustain
         elif r < .90: ev.append((t, f"tpad {rng.randrange(16)} {rng.randint(1, 127)}"))           # toggled
-        elif r < .95 or not TRANSPORT: ev.append((t, f"layer {rng.choice(list(LAYERS))}"))       # toggled
+        elif r < .93: ev.append((t, f"layer {rng.choice(list(LAYERS))}"))                         # toggled
+        elif r < .96: ev.append((t, f"wheel 0 {rng.randint(445, 640)}"))                          # pitch wheel (rest 535)
+        elif r < .97: ev.append((t, f"wheel 1 {rng.randint(474, 620)}"))                          # mod wheel (rest 620)
+        elif r < .99 or not TRANSPORT: ev.append((t, f"midi {0xE0 | rng.randrange(4):#x} {rng.randrange(128)} {rng.randrange(128)}"))   # a MIDI bend
         else: ev.append((t, f"btn {rng.choice((16, 17))}"))                                       # PLAY / REC
     return sorted(ev, key=lambda e: e[0])
 
 
 def with_release(burst, t0=3000):
     """the burst as script lines from t0, the toggles made real, then everything still down let go; -> (lines, t_end)"""
-    keys, outer, midi, layers, pads, out = set(), set(), set(), set(), set(), []
+    keys, outer, midi, layers, pads = set(), set(), set(), set(), set()
+    out = [(10, "wheel 0 535"), (10, "wheel 1 620")]       # (the wheels at rest, as on a unit)
     for dt, l in burst:
         t, w = t0 + dt, l.split()
         if w[0] == "key":
@@ -87,6 +92,7 @@ def with_release(burst, t0=3000):
     out += [(t, f"pad {k} 0") for k in sorted(pads)]
     out += [(t, f"btnup {LAYERS[x]}") for x in sorted(layers)]
     out += [(t, f"midi {0xB0 | ch:#x} 64 0") for ch in range(4)]
+    out += [(t, "wheel 0 535"), (t, "wheel 1 620")] + [(t, f"midi {0xE0 | ch:#x} 0 64") for ch in range(4)]   # (every bend at rest)
     out.append((t + 10, "midi 0xfc 0 0"))                # (a track the GLOBE layer started: the sequencer stops)
     return sorted(out, key=lambda e: e[0]), t
 
@@ -102,7 +108,9 @@ def run(burst):
 
 
 def bad(v):
-    return "gated=0 " not in v or not re.search(r"held=0,0,0,0 ", v)
+    """something still sounds or holds; or, every wheel and bend at rest, a track still bent or with vibrato"""
+    return ("gated=0 " not in v or not re.search(r"held=0,0,0,0 ", v) or not re.search(r"bend=0,0,0,0\b", v)
+            or ("vib=" in v and not re.search(r"vib=0,0,0,0\b", v)))
 
 
 def shrink(ev):

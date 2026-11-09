@@ -32,6 +32,16 @@ static int mirror_poll(void) { return 0; }      /* (the host has no USB: no mirr
 #include "obv_seq.h"
 #include "obv_patches.h"
 #include "cpu_meter.h"
+#define WR_NTRK NTRK
+#include "wheel_route.h"
+
+/* the wheels' scope (wheel_route.h): 0 = the track K3 has picked. Kept a variable for a GLOBAL setting to come ("all
+ * tracks"): that setting sets it, nothing else changes */
+static uint32_t wheels_global;
+static wheel_route_t wr_midi = {-1, 0};            /* a MIDI bend in on OMNI / channel A */
+#if BOARD_SMK37
+static wheel_route_t wr_wheel = {-1, 0};           /* the SMK-37's pitch wheel */
+#endif
 
 static cpu_meter_t cpu_m;                     /* the GLOBAL page: the slowest half of the last 2 s, the late ones */
 
@@ -1857,6 +1867,8 @@ static void midi_in(uint32_t notes_only)
             if (kind == 0x90u && d2) note_event_p(t, 1, d1, d2);
             else if (kind == 0x80u || kind == 0x90u) note_event_p(t, 0, d1, 0);
             else if (kind == 0xC0u && d1 < NPROG) { trk_load(t, d1); dirty_hdr = dirty_page = dirty_tags = dirty_steps = 1; }
+            else if (kind == 0xE0u) wheel_bend_to(t, (int32_t)(d1 | d2 << 7) - 8192, (int)wheels_global, ctl_bend_p);   /* (its track's
+                                                 * bend: these channels ignored it) */
             else if (kind == 0xB0u && cc_map[d1]) {
                 uint32_t p = cc_map[d1] - 1u;
                 if (!is_a_only(p)) set_param_in(&live_p[t], p, PDEF[p].max == 127 ? (int32_t)d2 : ((int32_t)d2 * PDEF[p].max + 63) / 127);
@@ -1874,7 +1886,8 @@ static void midi_in(uint32_t notes_only)
             note_in(0, d1, 0, midi_part[ch - 1u][d1 & 127u]);
             dirty_page |= rec || is_seq_page(page); dirty_steps = 1;
         }
-        else if (kind == 0xE0u) ctl_bend = (int32_t)(d1 | d2 << 7) - 8192;
+        else if (kind == 0xE0u) wheel_bend(&wr_midi, (int32_t)(d1 | d2 << 7) - 8192, seq_trk, (int)wheels_global, ctl_bend_p);   /* (the
+                                                 * track it plays; a K3 turn mid-bend: the owner keeps it to the rest) */
         else if (kind == 0xC0u && d1 < NPROG) { trk_load(set.midi_ch ? 0u : seq_trk, d1); dirty_hdr = dirty_page = dirty_tags = dirty_steps = 1; }
         else if (kind == 0xB0u) {
             if (d1 == 7u) ctl_cc7 = d2;
@@ -2649,7 +2662,29 @@ static void host_voices(void)                   /* (tests/host.c "voices"): what
         if (vc[v].gate) printf(" %u:%u", vc[v].part, vc[v].note);
     printf(" held=");
     for (p = 0; p < NPART; p++) printf("%u%s", nheld[p], p + 1u < NPART ? "," : "");
-    printf(" sus=%u hold=%u run=%u\n", ctl_sustain, ctl_hold, ctl_seq_run);
+    printf(" sus=%u hold=%u run=%u bend=", ctl_sustain, ctl_hold, ctl_seq_run);
+    for (p = 0; p < NPART; p++) printf("%d%s", ctl_bend_p[p], p + 1u < NPART ? "," : "");
+#if BOARD_SMK37
+    printf(" vib=");
+    for (p = 0; p < NPART; p++) printf("%d%s", ctl_vib_p[p], p + 1u < NPART ? "," : "");
+#endif
+    printf("\n");
+}
+static void host_wheels(void)                   /* (tests/host.c "wheels"): each track's bend, vibrato, its voices' pitch */
+{
+    uint32_t t, v;
+    printf("%6u ms  WHEELS sel=%u bend=", fm1_ms, seq_trk);
+    for (t = 0; t < NPART; t++) printf("%d%s", ctl_bend_p[t], t + 1u < NPART ? "," : "");
+    printf(" vib=");
+#if BOARD_SMK37
+    for (t = 0; t < NPART; t++) printf("%d%s", ctl_vib_p[t], t + 1u < NPART ? "," : "");
+#else
+    for (t = 0; t < NPART; t++) printf("0%s", t + 1u < NPART ? "," : "");   /* (the FM-1 has no mod wheel) */
+#endif
+    printf(" voices=");
+    for (v = 0; v < NV; v++)
+        if (vc[v].gate) printf("%u:%u:%u ", vc[v].part, vc[v].note, vc[v].inc1);
+    printf("\n");
 }
 static void host_steps(void)                    /* (tests/host.c "steps"): every track's set steps, note/gate (T = tie) */
 {

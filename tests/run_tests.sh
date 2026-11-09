@@ -26,6 +26,9 @@ run "keys held through a program change to MONO / UNISON / the arp: let go, no n
 run "hanging notes: the repros (tracks, octave, MIDI channels, MONO hand-over, REC pads)" python3 tests/hang_test.py
 run "recording: a note held through a K3 track change ends on the track it began on" python3 tests/rec_track_test.py
 run "knob speed: detents a second, not detents a main-loop pass (slow stays slow, a spin speeds up)" python3 tests/knob_speed_test.py
+$CC -o "$OUT/wheel_route_test" tests/wheel_route_test.c
+run "the wheels go to a track: owner to the rest, K3 mid-bend, two sources, channels, the scope fixed at the bend's start" "$OUT/wheel_route_test"
+run "the wheels end to end: each track's voices bend alone, across K3 turns, MIDI OMNI and channels B-D (both boards)" python3 tests/wheels_test.py
 run "the whole panel fuzzed under ASan + UBSan (both boards): no memory error, no overflow" python3 tests/fuzz_ui.py --n 12 --seed 11
 run "hanging notes, fuzzed: 150 random bursts of keys, MIDI, programs, modes, tracks, layers, PLAY / REC" python3 tests/fuzz_notes.py --n 150 --seed 7 --transport
 

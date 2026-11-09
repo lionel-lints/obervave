@@ -1,0 +1,56 @@
+# SMK-37: a note held on each of A-D (11 DUAL SAW), the wheels and a MIDI bend moved across K3 turns (tests/wheels_test.py)
+10 wheel 0 535
+10 wheel 1 620
+3000 midi 0xC0 10 0
+3100 keys 0x80
+3200 enc 2 1
+3250 midi 0xC0 10 0
+3300 keys 0x880
+3400 enc 2 1
+3450 midi 0xC0 10 0
+3500 keys 0x4880
+3600 enc 2 1
+3650 midi 0xC0 10 0
+3700 keys 0x804880
+3850 enc 2 -1
+3900 enc 2 -1
+4000 wheels
+# the wheel up on B
+4100 wheel 0 640
+4300 wheels
+# K3 to C mid-bend, the wheel moves on (not at rest): still B
+4400 enc 2 1
+4500 wheel 0 600
+4700 wheels
+# back at rest: B straight
+4800 wheel 0 536
+5000 wheels
+# the next bend: C (picked now)
+5100 wheel 0 640
+5300 wheels
+5400 wheel 0 536
+5600 wheels
+# the mod wheel up on C, then K3 to B: the vibrato moves to B
+5700 wheel 1 474
+5900 wheels
+6000 enc 2 -1
+6200 wheels
+6300 wheel 1 620
+6500 wheels
+# a MIDI bend (OMNI) on B, K3 to C mid-bend: still B; centre: straight
+6600 midi 0xE0 0 96
+6800 wheels
+6900 enc 2 1
+7000 midi 0xE0 0 100
+7200 wheels
+7300 midi 0xE0 0 64
+7500 wheels
+# two sources at once: the wheel on C, K3 to D, a MIDI bend on D
+7600 wheel 0 640
+7700 enc 2 1
+7800 midi 0xE0 0 32
+8000 wheels
+8100 wheel 0 536
+8100 midi 0xE0 0 64
+8300 wheels
+8400 end

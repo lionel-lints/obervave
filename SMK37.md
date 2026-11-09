@@ -79,8 +79,8 @@ Everything from the FM-1 keeps its job, on the SMK button with the same meaning;
 | **< / >** | | the step page of the track (up to 16: 256 steps); the LEDs light where there is another page |
 | **4 faders** | | two banks, see below |
 | **FADER BANK** | | fader bank A / B (its LED lit on B) |
-| **Pitch wheel** | | bend, ±2 semitones (the program's BEND on the OUTPUT page), every voice |
-| **Mod wheel** | | vibrato: the program's LFO to pitch, up to ±1/2 semitone (MOD DEPTH and CC 1 stay as they are) |
+| **Pitch wheel** | | bend, ±2 semitones (the program's BEND on the OUTPUT page), on the track K3 has picked; turn K3 mid-bend and the bend stays with its track until the wheel is back at rest |
+| **Mod wheel** | | vibrato on the picked track: the program's LFO to pitch, up to ±1/2 semitone (MOD DEPTH and CC 1 stay as they are); turn K3 and it moves with you |
 | **KNOB BANK** | | held: the panel check (below) |
 
 ### The pads: the step sequencer
