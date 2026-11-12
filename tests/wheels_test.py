@@ -35,7 +35,7 @@ def run(board, script):
     for m in re.finditer(r"(\d+) ms  WHEELS sel=(\d) bend=([-\d,]+) vib=([-\d,]+) voices=(.*)", out):
         voices = {}
         for v in m[5].split():
-            part, note, inc = map(int, v.split(":"))
+            part, note, inc = map(int, v.split(":")[:3])   # (part:note:OSC 1:OSC 2)
             voices.setdefault(part, []).append(inc)
         snaps[int(m[1])] = (int(m[2]), list(map(int, m[3].split(","))), list(map(int, m[4].split(","))),
                             {k: sorted(x) for k, x in voices.items()})

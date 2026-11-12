@@ -1,0 +1,67 @@
+# 12 RESO ZAP, OSC 2 FINE centred, one note held 12 s; the voice's two oscillators each report their pitch (tests/osc_drift_test.py)
+3000 midi 0xC0 11 0
+3100 midi 0xB0 57 127
+3100 midi 0xB0 31 64
+3500 midi 0x90 48 100
+4000 wheels
+4200 wheels
+4400 wheels
+4600 wheels
+4800 wheels
+5000 wheels
+5200 wheels
+5400 wheels
+5600 wheels
+5800 wheels
+6000 wheels
+6200 wheels
+6400 wheels
+6600 wheels
+6800 wheels
+7000 wheels
+7200 wheels
+7400 wheels
+7600 wheels
+7800 wheels
+8000 wheels
+8200 wheels
+8400 wheels
+8600 wheels
+8800 wheels
+9000 wheels
+9200 wheels
+9400 wheels
+9600 wheels
+9800 wheels
+10000 wheels
+10200 wheels
+10400 wheels
+10600 wheels
+10800 wheels
+11000 wheels
+11200 wheels
+11400 wheels
+11600 wheels
+11800 wheels
+12000 wheels
+12200 wheels
+12400 wheels
+12600 wheels
+12800 wheels
+13000 wheels
+13200 wheels
+13400 wheels
+13600 wheels
+13800 wheels
+14000 wheels
+14200 wheels
+14400 wheels
+14600 wheels
+14800 wheels
+15000 wheels
+15200 wheels
+15400 wheels
+15600 wheels
+15800 wheels
+16000 midi 0x80 48 0
+16500 end

@@ -32,6 +32,8 @@ typedef struct {
     int32_t det8;                               /* unison / dual offset, Q8 */
     int32_t gl, gr;                             /* pan gains Q12 */
     int32_t drift;                              /* the vintage random walk */
+    int32_t drift2;                             /* OSC 2's own walk (the same kind): the two oscillators beat, as a VCO pair */
+    uint32_t rnd2;                              /* its own random numbers (the noise oscillator's stay as they were) */
     uint32_t lfo_blk;                           /* blocks since the note on (LFO delay / fade) */
     int32_t lfo_fade;                           /* Q15 */
     uint32_t seq;                               /* allocation order */
@@ -666,6 +668,8 @@ static void voice_block(voice_t *v, uint32_t card)
     /* vintage: a slow random walk on the pitch */
     v->drift += (int32_t)(xorshift(&v->noise) & 31u) - 16;
     v->drift -= v->drift >> 11;
+    v->drift2 += (int32_t)(xorshift(&v->rnd2) & 31u) - 16;   /* (the same walk for OSC 2: what the two share, a bias, */
+    v->drift2 -= v->drift2 >> 11;                             /* cancels in their difference) */
     /* pitch, Q8 semitones */
     p8 = (v->pitch16 >> 8) + g->bend8 + ctl_tune8 + v->det8 + ((VINT_TUNE8[card % NCARD] * vint) >> 7) + ((v->drift * vint) >> 10);
     p8 += (lfo * g->wheel_q * 4) >> 15;         /* the wheel's vibrato */
@@ -675,7 +679,7 @@ static void voice_block(voice_t *v, uint32_t card)
     lfo_to = (lfo * g->lfo_pd * 24) >> 15;
     p1 = p8 + (pv[P_LFO_PITCH_TO] != TO_O2 ? lfo_to : 0);
     p2 = p8 + (pv[P_LFO_PITCH_TO] != TO_O1 ? lfo_to : 0) + ((int32_t)pv[P_O2_SEMI] - 24) * 256 + g->det_fine8
-       + ((fenv * g->env_o2 * 97) >> 15);
+       + ((fenv * g->env_o2 * 97) >> 15) + (((v->drift2 - v->drift) * vint) >> 10);   /* OSC 2 on its own walk */
     v->inc1 = pitch_inc(p1);
     v->inc2 = pitch_inc(p2);
     tmp = (lfo * g->lfo_pwd);
@@ -864,6 +868,7 @@ static void engine_init(void)
     uint32_t v;
     for (v = 0; v < NV; v++) {
         vc[v].noise = 0x12345678u * (v + 1u) + 0x9E3779B9u;
+        vc[v].rnd2 = 0x2545F491u * (v + 1u) + 0x6C8E9CF5u;   /* (OSC 2's walk: a seed of its own) */
         vc[v].o1.ph = xorshift(&vc[v].noise);  /* free-running oscillators start anywhere */
         vc[v].o2.ph = xorshift(&vc[v].noise);
         vc[v].gl = vc[v].gr = 2896;

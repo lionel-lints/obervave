@@ -2693,7 +2693,7 @@ static void host_wheels(void)                   /* (tests/host.c "wheels"): each
 #endif
     printf(" voices=");
     for (v = 0; v < NV; v++)
-        if (vc[v].gate) printf("%u:%u:%u ", vc[v].part, vc[v].note, vc[v].inc1);
+        if (vc[v].gate) printf("%u:%u:%u:%u ", vc[v].part, vc[v].note, vc[v].inc1, vc[v].inc2);
     printf("\n");
 }
 static void host_steps(void)                    /* (tests/host.c "steps"): every track's set steps, note/gate (T = tie) */
