@@ -121,6 +121,9 @@ typedef struct {
     uint32_t lfo2_ph, lfo2_rnd_a, lfo2_rnd_b;   /* LFO 2: free-running, never restarted */
     int32_t lfo2_val;                           /* this block, Q15 */
     int32_t l1_depth, l1_depth_on;              /* LFO 2 on LFO 1's depth: its gain, Q15 (32767 = as it is) */
+    int32_t bend_sm, vib_sm;                    /* the pitch bend (Q16 semitones) and the SMK-37 mod wheel's vibrato (x256) as
+                                                 * they glide to the wheel's: a wheel reads in ~3-cent counts, ~once a
+                                                 * main-loop pass; stepped, a slow bend was a staircase */
 } part_t;
 static part_t pt[NPART] = {{&live_p[0], 0, 0, 0, 0, 60 << 16}, {&live_p[1], 0, 0, 0, 0, 60 << 16},
                             {&live_p[2], 0, 0, 0, 0, 60 << 16}, {&live_p[3], 0, 0, 0, 0, 60 << 16}};
@@ -592,6 +595,9 @@ static int32_t lfo_shape_r(uint32_t ph, uint32_t shape, uint32_t rnd_a, uint32_t
 static int32_t lfo_shape(const part_t *g, uint32_t ph, uint32_t shape) { return lfo_shape_r(ph, shape, g->lfo_rnd_a, g->lfo_rnd_b); }
 
 /* LFO 2's amount: -64..63 squared with its sign (-64..62): fine near 0, the whole range at the ends */
+#ifdef OBV_HOST
+static int pitch_trace(void) { static int on = -1; if (on < 0) on = getenv("OBV_PITCH_TRACE") != 0; return on; }   /* (host: tests/bend_test.py) */
+#endif
 static int32_t l2_q(uint32_t amt) { int32_t a = (int32_t)amt - 64; return a * (a < 0 ? -a : a) / 64; }
 /* the sum of LFO 2's amounts on destination d (both slots may go to the same) */
 static int32_t l2_amt(const uint8_t *pv, uint32_t d)
@@ -638,7 +644,20 @@ static void block_globals(part_t *g)            /* a sound's derived numbers, on
     d = pv[P_LFO_PWM]; g->lfo_pwd = (d * d) >> 7;
     g->lfo_ad = pv[P_LFO_AMP];
     g->wheel_q = pv[P_MOD_DEPTH];               /* the knob and the mod wheel (CC 1) are the same value */
-    g->bend8 = (ctl_bend_p[(uint32_t)(g - pt) % NPART] * pv[P_BEND] * 256) >> 13;   /* (its own track's bend) */
+    {   /* its own track's bend, gliding there (~12 ms: 1/32 a block) */
+        int32_t tgt = ((ctl_bend_p[(uint32_t)(g - pt) % NPART] * pv[P_BEND] * 256) >> 13) * 256;
+        g->bend_sm += (tgt - g->bend_sm) / 32;
+        if (g->bend_sm - tgt < 32 && tgt - g->bend_sm < 32) g->bend_sm = tgt;   /* (there: exactly) */
+        g->bend8 = g->bend_sm / 256;
+#if BOARD_SMK37
+        tgt = ctl_vib_p[(uint32_t)(g - pt) % NPART] * 256;   /* the mod wheel's vibrato depth, the same way */
+        g->vib_sm += (tgt - g->vib_sm) / 32;
+        if (g->vib_sm - tgt < 32 && tgt - g->vib_sm < 32) g->vib_sm = tgt;
+#ifdef OBV_HOST
+        if (g == &pt[0] && pitch_trace()) fprintf(stderr, "V %d\n", g->vib_sm);   /* (tests/bend_test.py) */
+#endif
+#endif
+    }
     g->env_o2 = (int32_t)pv[P_ENV_O2] - 64;
     g->det_fine8 = ((int32_t)pv[P_O2_FINE] - 64) * 2;
     d = pv[P_O1_LVL]; g->lvl1 = (d * d) >> 7;
@@ -723,7 +742,7 @@ static void voice_block(voice_t *v, uint32_t card)
     p8 = (v->pitch16 >> 8) + g->bend8 + ctl_tune8 + v->det8 + ((VINT_TUNE8[card % NCARD] * vint) >> 7) + ((v->drift * vint) >> 10);
     p8 += (lfo * g->wheel_q * 4) >> 15;         /* the wheel's vibrato */
 #if BOARD_SMK37
-    p8 += (lfo * ctl_vib_p[v->part % NPART]) >> 15;   /* the SMK-37's mod wheel on its track: pitch only, gentle */
+    p8 += (lfo * (g->vib_sm / 256)) >> 15;      /* the SMK-37's mod wheel on its track (glided): pitch only, gentle */
 #endif
     lfo_to = (lfo * g->lfo_pd * 24) >> 15;
     p1 = p8 + (pv[P_LFO_PITCH_TO] != TO_O2 ? lfo_to : 0);
@@ -733,6 +752,9 @@ static void voice_block(voice_t *v, uint32_t card)
     if (q2o) p2 += (m2 * q2o * 48) >> 15;
     v->inc1 = pitch_inc(p1);
     v->inc2 = pitch_inc(p2);
+#ifdef OBV_HOST
+    if (card == 0u && pitch_trace()) fprintf(stderr, "P %u\n", v->inc1);   /* (tests/bend_test.py: every block) */
+#endif
     tmp = (lfo * g->lfo_pwd);
     {
         int32_t t2 = q2w ? m2 * q2w * 2 : 0;    /* LFO 2 on both pulse widths: LFO 1's whole depth at full */

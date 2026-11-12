@@ -193,11 +193,20 @@ static const uint8_t PF_WURLI[] = {P_O1_WAVE, W_PLS, P_O1_PW, 38, P_O2_WAVE, W_P
     P_FTYPE, F_LP12, P_CUTOFF, 50, P_RESO, 15, P_FENV_AMT, 100, P_KEYTRK, 90, P_FA, 0, P_FD, 66, P_FS, 22, P_FR, 60,
     P_AA, 1, P_AD, 94, P_AS, 30, P_AR, 62, P_DRIVE, 35, P_VEL_FLT, 100, P_VEL_AMP, 90, P_LFO_SHAPE, L_TRI, P_LFO_RATE, 96,
     P_LFO_PHASE, LP_FREE, P_LFO_AMP, 30, P_VINTAGE, 30, P_SPREAD, 60, P_REV_SIZE, 75, P_REV_MIX, 20, X};
+/* 71: an early-80s string pad that breathes – two pulses, LFO 1 shimmering their widths (each voice a little out of
+ * step), LFO 2 once every ten seconds on the cutoff and the pan, a little; LP 12, slow swell and tail */
+static const uint8_t PF_BREATH_PAD[] = {P_O1_WAVE, W_PLS, P_O1_PW, 64, P_O1_LVL, 110, P_O2_WAVE, W_PLS, P_O2_PW, 45,
+    P_O2_LVL, 100, P_O2_SEMI, 24, P_O2_FINE, 69, P_FTYPE, F_LP12, P_CUTOFF, 64, P_RESO, 10, P_FENV_AMT, 84, P_KEYTRK, 64,
+    P_FA, 86, P_FD, 103, P_FS, 70, P_FR, 103, P_AA, 82, P_AD, 98, P_AS, 110, P_AR, 103, P_LFO_SHAPE, L_TRI, P_LFO_RATE, 55,
+    P_LFO_DELAY, 0, P_LFO_PHASE, LP_SPREAD, P_LFO_PWM, 60, P_LFO_PWM_TO, TO_BOTH, P_L2_SHAPE, L_TRI, P_L2_RATE, 13,
+    P_L2_DEST1, L2_CUTOFF, P_L2_AMT1, 74, P_L2_DEST2, L2_PAN, P_L2_AMT2, 79, P_VINTAGE, 50, P_SPREAD, 80,
+    P_REV_SIZE, 100, P_REV_MIX, 30, P_VOLUME, 80, X};
 #undef X
 
-static const factory_t FACT_INIT = {"INIT", PF_INIT};   /* 71-99 */
-static const factory_t FACT_VIBE[] = {                  /* 65-70 (VIBE): drums and keys */
-    {"KICK", PF_KICK}, {"SNARE", PF_SNARE}, {"HIHAT", PF_HIHAT}, {"CLAP", PF_CLAP}, {"E-PIANO", PF_EPIANO}, {"WURLI", PF_WURLI}};
+static const factory_t FACT_INIT = {"INIT", PF_INIT};   /* 72-99 */
+static const factory_t FACT_VIBE[] = {                  /* 65-70 (VIBE): drums and keys; 71: this fork's */
+    {"KICK", PF_KICK}, {"SNARE", PF_SNARE}, {"HIHAT", PF_HIHAT}, {"CLAP", PF_CLAP}, {"E-PIANO", PF_EPIANO}, {"WURLI", PF_WURLI},
+    {"BREATH PAD", PF_BREATH_PAD}};
 #define NVIBE (sizeof FACT_VIBE / sizeof FACT_VIBE[0])
 static const factory_t FACTORY[NFACT] = {
     {"DARK ARP", PF_DARK_ARP}, {"POLY BRASS", PF_POLY_BRASS}, {"SYNC LEAD", PF_SYNC_LEAD}, {"UNISON LD", PF_UNISON_LEAD},

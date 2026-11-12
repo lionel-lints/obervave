@@ -1,0 +1,12 @@
+# SMK-37: a note held, the pitch wheel flicked up at once, held, released at once; then the mod wheel thrown up (tests/bend_test.py)
+10 wheel 0 535
+10 wheel 1 620
+3000 midi 0xC0 98 0
+3050 midi 0xB0 57 0
+3100 midi 0xB0 31 64
+3500 midi 0x90 60 100
+4000 wheel 0 640
+4500 wheel 0 535
+5000 wheel 1 474
+5500 wheel 1 620
+6000 end

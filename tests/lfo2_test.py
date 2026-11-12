@@ -28,7 +28,7 @@ def cc_for(value, maximum):                       # the CC that lands on value (
 
 
 def render(name, setup, dest1="OFF", dest2="OFF", amt1=127, amt2=64, delay=0, note_ms=4500):
-    lines = ["3000 midi 0xC0 70 0", f"3050 midi 0xB0 {CC['VINTAGE']} 0", f"3050 midi 0xB0 {CC['RATE']} 95",
+    lines = ["3000 midi 0xC0 98 0", f"3050 midi 0xB0 {CC['VINTAGE']} 0", f"3050 midi 0xB0 {CC['RATE']} 95",
              f"3050 midi 0xB0 {CC['FENV']} 64"]   # (no drift, no filter envelope: the baseline holds still)
     lines += [f"3050 midi 0xB0 {CC[k]} {v}" for k, v in setup]
     lines += [f"3060 midi 0xB0 {CC['DEST1']} {cc_for(DEST.index(dest1), 12)}", f"3060 midi 0xB0 {CC['AMT1']} {amt1}",

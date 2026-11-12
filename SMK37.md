@@ -87,6 +87,10 @@ Everything from the FM-1 keeps its job, on the SMK button with the same meaning;
 | **Mod wheel** | | vibrato on the track K5 has picked: the program's LFO to pitch, up to ±1/2 semitone (MOD DEPTH and CC 1 stay as they are); turn K5 and it moves with you |
 | **KNOB BANK** | | held: the panel check (below) |
 
+**The wheels glide.** The pitch wheel reads in steps of about 3 cents, and a slow bend used to be a staircase of them;
+now each track's bend and mod-wheel vibrato glide to the wheel in ~12 ms (a slow bend moves in steps under half a cent,
+a flick lands in ~50 ms, the rest is exact). MIDI pitch bend glides the same way.
+
 ### The pads: the step sequencer
 
 The 16 pads are the 16 steps of the selected track's page, in reading order: the top row steps 1-8, the bottom row

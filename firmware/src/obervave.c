@@ -766,7 +766,9 @@ static void param_value(char *s, uint32_t p, uint32_t v)   /* <= 7 characters */
         if (p == P_GLIDE) { if (!v) scat(s, "OFF"); else { fmt_u(s, GLIDE_MS[v & 127u]); scat(s, "ms"); } }
         else fmt_ms(s, TIME_MS_X10[v & 127u]);
         break;
-    case K_HZ: { uint32_t h = LFO_HZ_X100[v & 127u]; fmt_u(s, h / 100u); scat(s, "."); fmt_u(t, (h / 10u) % 10u); scat(s, t); scat(s, "Hz"); } break;
+    case K_HZ: { uint32_t h = LFO_HZ_X100[v & 127u]; fmt_u(s, h / 100u); scat(s, "."); fmt_u(t, (h / 10u) % 10u); scat(s, t);
+        if (h < 100u) { fmt_u(t, h % 10u); scat(s, t); }   /* (under 1 Hz two decimals: the slowest read 0.0Hz) */
+        scat(s, "Hz"); } break;
     case K_PCT: fmt_u(s, (v * 100u + 63u) / 127u); scat(s, "%"); break;
     case K_CUT: { uint32_t hz = CUT_HZ[(v + 8u) % 137u]; if (hz < 10000u) { fmt_u(s, hz); scat(s, "Hz"); } else { fmt_u(s, hz / 1000u); scat(s, "."); fmt_u(t, (hz / 100u) % 10u); scat(s, t); scat(s, "k"); } } break;
     case K_OCT: fmt_u(s, v); scat(s, " OCT"); break;
