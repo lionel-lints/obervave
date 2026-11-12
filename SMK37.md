@@ -76,7 +76,7 @@ Everything from the FM-1 keeps its job, on the SMK button with the same meaning;
 | **SCALE** | SEL | with BT held: a random sound |
 | **GLOBE** | GLO | GLOBAL / OUTPUT; held: start / stop, mute, solo, tap tempo, on the keys and on the pads (they show it) |
 | **BT** | SAVE | twice: save the program; in the sequencer: save the pattern now; held: white keys or pads 1-8 go to pattern 1-8 (the pads show them), black keys copy there |
-| **ARP**, **FX**, **SEQ** | ARP, FX, SEQ | as on the FM-1 (SEQ tapped: the full-screen sequencer, K5 the step cursor, see the [README](README.md#the-sequencer); held: the keys are steps) |
+| **ARP**, **FX**, **SEQ** | ARP, FX, SEQ | as on the FM-1 (SEQ tapped: the full-screen sequencer, K1 the step cursor, see the [README](README.md#the-sequencer); held: the keys are steps) |
 | **SEQ PLAY**, **SEQ REC** | PLAY, REC | start / stop; record (held 2 s: clear the track) |
 | **OCTAVE- / OCTAVE+** | OCT- / OCT+ | the octave (both: 0); SEQ held: step page; PARA held: undo / redo |
 | **16 pads** | | the step sequencer, see below |
@@ -149,7 +149,7 @@ an effect down (the reverb costs the most) and tell us which sound did it.
 - The SMK-37 has no key LEDs: the lit keys of the FM-1 (the notes that sound, the layers' tiles) are not there. The
   pads show the steps, the screen the rest.
 - No TRS MIDI IN (OberVave has none on the FM-1 either). USB-MIDI in and out, clock, start and stop work.
-- K5 is an endless knob, not a pot: the MASTER level starts at about 70 % of its travel at every power-on.
+- K8 is an endless knob, not a pot: the MASTER level starts at about 70 % of its travel at every power-on.
 
 ## Build
 
