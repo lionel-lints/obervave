@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* The wheels go to a track, not to the whole song: pitch bend and the mod wheel's vibrato are per track (the engine's
- * ctl_bend_p / ctl_vib_p), as the keys play, the knobs edit and REC records the track K3 has picked.
+ * ctl_bend_p / ctl_vib_p), as the keys play, the knobs edit and REC records the track ALGORITHM has picked (SMK-37: K5).
  *
  *  - wheel_mask: the one place that says which tracks a wheel moves. Per track now; `global` (all four at once) is
  *    there for a setting to come, and the rules below hold for it as they are.
  *  - the pitch wheel springs back: the track picked when it leaves the rest owns the bend until it is back at rest, so a
- *    K3 turn in the middle of a bend never leaves a track bent nor makes one jump; the next bend goes to the track
+ *    track change (ALGORITHM) in the middle of a bend never leaves a track bent nor makes one jump; the next bend goes to the track
  *    picked then. The tracks it moves are fixed as it begins too: the scope changed mid-bend strands none. A MIDI bend in on OMNI is the same, with its own owner (wheel_route_t each).
  *  - the mod wheel stays where it is put: it follows the picked track; the one left goes back to no vibrato, the new
  *    one takes the wheel as it stands.

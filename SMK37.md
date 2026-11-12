@@ -65,10 +65,10 @@ Everything from the FM-1 keeps its job, on the SMK button with the same meaning;
 | Keys C3 .. E3, G#5 .. C6 | more keys | the notes below F3 and above G5 (OCTAVE moves them too); PARA held: erase that note |
 | Velocity | | every key and pad, from your unit's factory curves (the programs' VEL>AMP and VEL>FLT set how much it matters) |
 | **K1 · K2 · K3 · K4** | KNOB 1 · 2 · 3 · 4 | the page's four knobs, left to right as on the screen |
-| **K5** | MASTER | the output level (an endless knob: 24 steps of 1024 a click; the level glides, no click while a note sounds) |
-| **K6** | SELECT | the tempo |
-| **K7** | PRESETS | the program; in the sequencer: the pattern (playing: from the loop's end) |
-| **K8** | ALGORITHM | track A-D |
+| **K5** | ALGORITHM | track A-D |
+| **K6** | PRESETS | the program; in the sequencer: the pattern (playing: from the loop's end) |
+| **K7** | SELECT | the tempo |
+| **K8** | MASTER | the output level, at the edge (an endless knob: 24 steps of 1024 a click; the level glides, no click while a note sounds) |
 | **PATCH** | HOME | PERFORM; held with a layer: lock it |
 | **PARA** | EDIT | OSC / FILTER pages; held: the erase layer |
 | **CHORD** | ENV | the envelope pages |
@@ -83,8 +83,8 @@ Everything from the FM-1 keeps its job, on the SMK button with the same meaning;
 | **< / >** | | the step page of the track (up to 16: 256 steps); the LEDs light where there is another page |
 | **4 faders** | | two banks, see below |
 | **FADER BANK** | | fader bank A / B (its LED lit on B) |
-| **Pitch wheel** | | bend, ±2 semitones (the program's BEND on the OUTPUT page), on the track K3 has picked; turn K3 mid-bend and the bend stays with its track until the wheel is back at rest |
-| **Mod wheel** | | vibrato on the picked track: the program's LFO to pitch, up to ±1/2 semitone (MOD DEPTH and CC 1 stay as they are); turn K3 and it moves with you |
+| **Pitch wheel** | | bend, ±2 semitones (the program's BEND on the OUTPUT page), on the track K5 has picked; turn K5 mid-bend and the bend stays with its track until the wheel is back at rest |
+| **Mod wheel** | | vibrato on the track K5 has picked: the program's LFO to pitch, up to ±1/2 semitone (MOD DEPTH and CC 1 stay as they are); turn K5 and it moves with you |
 | **KNOB BANK** | | held: the panel check (below) |
 
 ### The pads: the step sequencer
@@ -97,7 +97,7 @@ The 16 pads are the 16 steps of the selected track's page, in reading order: the
 - **A lit pad** pressed and let go clears its step.
 - **Hold a pad** and the screen shows its step: **K1-K4** set NOTE, LEVEL, RATCHET and GATE. Hold a pad and tap a
   later one: one long note from the first to the second.
-- **< >** turn the page (as OCTAVE- / OCTAVE+ with SEQ held; the black keys F#3 .. A#4 reach pages 1-8); **K8** picks
+- **< >** turn the page (as OCTAVE- / OCTAVE+ with SEQ held; the black keys F#3 .. A#4 reach pages 1-8); **K5** picks
   track A-D. A track longer than 16 steps has a page per 16, up to 16 pages (SEQ held + K4 sets the length).
 - **While REC is on** (armed or recording) the pads play: each pad plays the last note or chord at its velocity,
   and it is recorded like the keys.
@@ -128,7 +128,7 @@ saved ones dim. Let go and the pads are the steps again.
 | Bank | Fader 1 | Fader 2 | Fader 3 | Fader 4 |
 | --- | --- | --- | --- | --- |
 | **A** (PERFORM) | CUTOFF | RESO | ENV AMT | RELEASE |
-| **B** (effects) | CHORUS mix | DELAY mix | REVERB mix | MASTER (the level K5 turns) |
+| **B** (effects) | CHORUS mix | DELAY mix | REVERB mix | MASTER (the level K8 turns) |
 
 A fader takes over only once you move it, also after a bank change, so nothing jumps. While REC records, bank A's moves
 are recorded onto the steps as a knob's are (four recorded controls a track). A short bar under the page

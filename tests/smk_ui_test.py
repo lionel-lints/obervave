@@ -82,7 +82,7 @@ def main():
     check("set steps lit in track A's blue, empty ones dark but the beats", b > r and p[1] == 0 and p[2] == 0 and
           all(p[i] for i in (0, 4, 5, 8, 9, 10, 11)), [f"{x:06X}" for x in p])
     st, p = state(d, 8500), pads(d, 8500)
-    check("K8: track B (3.0: a bar of 16, empty): no steps, only the beats glow", st["trk"] == "1" and st["len"] == "16" and
+    check("K5: track B (3.0: a bar of 16, empty): no steps, only the beats glow", st["trk"] == "1" and st["len"] == "16" and
           not any(p[i] for i in range(16) if i % 4), (st, p))
 
     st = state(d, 9200)

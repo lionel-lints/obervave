@@ -35,7 +35,7 @@ static int mirror_poll(void) { return 0; }      /* (the host has no USB: no mirr
 #define WR_NTRK NTRK
 #include "wheel_route.h"
 
-/* the wheels' scope (wheel_route.h): 0 = the track K3 has picked. Kept a variable for a GLOBAL setting to come ("all
+/* the wheels' scope (wheel_route.h): 0 = the track ALGORITHM has picked (SMK-37: K5). Kept a variable for a GLOBAL setting to come ("all
  * tracks"): that setting sets it, nothing else changes */
 static uint32_t wheels_global;
 static wheel_route_t wr_midi = {-1, 0};            /* a MIDI bend in on OMNI / channel A */
@@ -121,7 +121,7 @@ static uint32_t rec_down, rec_down_t, beat_seen, beat_t;   /* rec_down: REC held
 static uint32_t rec_wait;                       /* a track + 1 that REC waits for: it records from its start on the bar */
 static struct { uint16_t step; uint8_t trk, note; uint32_t t; } rec_open[128];   /* a recorded note still held, by the note
                                                  * heard: where, when, on which track (as stored there) it began: its end goes
-                                                 * there, whatever track K3 has picked by the time the key is let go */
+                                                 * there, whatever track ALGORITHM has picked by the time the key is let go */
 static pattern_t undo_pat __attribute__((section(".pool")));                      /* one level of undo: the pattern before the last pass / erase / clear */
 static uint32_t undo_ok;
 static uint8_t erase_on[128];                   /* notes erased while their key is held (EDIT + key, playing) */
@@ -157,18 +157,18 @@ static uint32_t smk_pads_held, smk_pad_t0, smk_step_vel;
 #define KEY_VEL(k) fm1_in.key_vel[SMK_KEY_F3 + (k)]   /* the keys play with velocity (the unit's factory curves) */
 #define STEP_NEW_VEL(st) do { if (smk_step_vel) (st)->vel = (uint8_t)smk_step_vel; } while (0)
 #define REC_TIE_VEL(t, s0) seq_step(t, s0)->vel   /* a recorded long note: its ties keep the played velocity */
-/* the button and knob names in the hints: the SMK's printed ones (PARA = EDIT, PATCH = HOME, SCALE = SEL; K6 SELECT,
- * K8 ALGORITHM, K4 = KNOB 4) */
+/* the button and knob names in the hints: the SMK's printed ones (PARA = EDIT, PATCH = HOME, SCALE = SEL; K7 SELECT,
+ * K5 ALGORITHM, K6 PRESETS, K8 MASTER, K4 = KNOB 4) */
 #define NM_EDIT "PARA"
 #define NM_HOME "PATCH"
 #define NM_SELBTN "SCALE"
-#define NM_SELECT "K6"
-#define NM_ALGO "K8"
+#define NM_SELECT "K7"
+#define NM_ALGO "K5"
 #define NM_KNOB4 "K4"
 #define NM_K1 "K1"                              /* (the short names in the sequencer's lines) */
 #define NM_K3 "K3"
 #define NM_K4 "K4"
-#define NM_PRESETS "K7"
+#define NM_PRESETS "K6"
 #define NM_SAVE "BT"
 #else
 #define SMK_PAD_HELD 0
@@ -258,7 +258,7 @@ static void trk_load(uint32_t t, uint32_t n)    /* track t: program n */
 
 /* the panel's notes (keys, pads, MIDI) go to the sound the panel is on; a release goes where its note began */
 /* part: the track the note plays on. Each source (a key, an outer key, a pad, MIDI) keeps the track its note began on
- * and lets go there: one note number can sound on two tracks at once (a key held through a K3 turn, the same note from
+ * and lets go there: one note number can sound on two tracks at once (a key held through a track change (ALGORITHM), the same note from
  * MIDI), and a track per note number sent the second one's release to the first one's track: a voice hung */
 static void play_note(uint32_t on, uint32_t note, uint32_t vel, uint32_t part)
 {
@@ -1894,7 +1894,7 @@ static void midi_in(uint32_t notes_only)
             dirty_page |= rec || is_seq_page(page); dirty_steps = 1;
         }
         else if (kind == 0xE0u) wheel_bend(&wr_midi, (int32_t)(d1 | d2 << 7) - 8192, seq_trk, (int)wheels_global, ctl_bend_p);   /* (the
-                                                 * track it plays; a K3 turn mid-bend: the owner keeps it to the rest) */
+                                                 * track it plays; a track change (ALGORITHM) mid-bend: the owner keeps it to the rest) */
         else if (kind == 0xC0u && d1 < NPROG) { trk_load(set.midi_ch ? 0u : seq_trk, d1); dirty_hdr = dirty_page = dirty_tags = dirty_steps = 1; }
         else if (kind == 0xB0u) {
             if (d1 == 7u) ctl_cc7 = d2;

@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "build" / "host"
-IDS = {"fm1": {"GLOBE": "7", "MIDICH": "4"}, "smk37": {"GLOBE": "10", "MIDICH": "6"}}
+IDS = {"fm1": {"GLOBE": "7", "MIDICH": "4"}, "smk37": {"GLOBE": "10", "MIDICH": "2"}}
 UP2, UP1 = 2 ** (2 / 12), 2 ** (1 / 12)    # full bend (BEND 2), half bend
 fails = 0
 

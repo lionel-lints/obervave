@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 """Hanging notes, hunted at random. Each scenario is a burst of panel and MIDI events on the SMK-37 host build (keys,
-outer keys, MIDI notes on several channels, program changes, K3 track, K4 program, octave, MODE / ARP / VOICES by CC,
+outer keys, MIDI notes on several channels, program changes, K5 track, K6 program, octave, MODE / ARP / VOICES by CC,
 the sustain pedal, the pads, the SEQ / PARA / GLOBE / BT / FX layers held), then everything let go. The rule: with no
 key and no MIDI note down, no sustain, no HOLD and the sequencer stopped, no voice may still be gated, and no sound may
 still list a held key; with every wheel and MIDI bend back at rest, no track may stay bent or keep a vibrato. A
@@ -45,8 +45,8 @@ def scenario(rng):
         elif r < .30: ev.append((t, f"xkey {rng.choice(OUTER)} {rng.randint(1, 127)}"))           # toggled
         elif r < .42: ev.append((t, f"mnote {rng.randrange(4)} {rng.randint(36, 84)} {rng.randint(1, 127)}"))   # toggled
         elif r < .50: ev.append((t, f"midi {0xC0 | rng.randrange(4):#x} {rng.randrange(70)} 0"))   # program change
-        elif r < .56: ev.append((t, f"enc 3 {rng.choice((-2, -1, 1, 2))}"))                        # K4: program
-        elif r < .62: ev.append((t, f"enc 2 {rng.choice((-1, 1))}"))                               # K3: track
+        elif r < .56: ev.append((t, f"enc 5 {rng.choice((-2, -1, 1, 2))}"))                        # K6: program
+        elif r < .62: ev.append((t, f"enc 4 {rng.choice((-1, 1))}"))                               # K5: track
         elif r < .67: ev.append((t, f"btn {rng.choice((4, 5))}"))                                  # octave
         elif r < .72: ev.append((t, f"midi 0xb0 {CC['P_MODE']} {rng.randrange(128)}"))
         elif r < .76: ev.append((t, f"midi 0xb0 {CC['P_ARP_MODE']} {rng.choice((0, 0, rng.randrange(128)))}"))

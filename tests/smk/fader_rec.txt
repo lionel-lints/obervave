@@ -1,4 +1,4 @@
-# REC recording, fader A1 (CUTOFF) moved over the bar: its moves land in a lane of track A, as K5's do (smk_ui_test.py)
+# REC recording, fader A1 (CUTOFF) moved over the bar: its moves land in a lane of track A, as K1's do (smk_ui_test.py)
 3000 btn 16
 3200 btn 17
 3400 fader 0 20

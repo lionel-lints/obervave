@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """A knob's speed is its detents a second: a slow turn moves one a detent however many detents a main-loop pass took
 (a long pass: the screen drawing), a fast spin goes further however short the passes. tests/smk/knob_speed.txt on the
-SMK-37 host build: K5 = CUTOFF on PERFORM. Exit 1 on a failure."""
+SMK-37 host build: K1 = CUTOFF on PERFORM. Exit 1 on a failure."""
 import os, re, subprocess, sys
 from pathlib import Path
 

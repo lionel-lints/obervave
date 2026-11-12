@@ -24,14 +24,15 @@
 #if BOARD_SMK37
 /* the M-Vave SMK-37 (SMK37.md): the FM-1's buttons on the SMK buttons that mean the same (the fm1-to-smk37 kit's
  * printed-name map: PATCH = HOME, PARA = EDIT, CHORD = ENV, NOTE REPEAT = LFO, SCALE = SEL, GLOBE = GLO, BT = SAVE),
- * the four extras; K1..K4 are KNOB 1..4 (the page's four, left to right), K5 the MASTER pot (hal/smk_input.h),
- * K6 SELECT, K7 PRESETS, K8 ALGORITHM.
+ * the four extras; K1..K4 are KNOB 1..4 (the page's four, left to right, by the screen), then from the sound out to
+ * the whole: K5 ALGORITHM (the track), K6 PRESETS (its program), K7 SELECT (tempo), K8 the MASTER pot at the edge
+ * (hal/smk_input.h).
  * The note keys have no LEDs here (the pads show the steps): KEY_LED ids are past the button LEDs and do nothing */
 enum { BTN_KNOB_BANK = 0, BTN_FADER_BANK = 1, BTN_LEFT = 2, BTN_RIGHT = 3, BTN_OCT_DOWN = 4, BTN_OCT_UP = 5,
        BTN_ARP = 6, BTN_LFO = 7, BTN_SEL = 8, BTN_ENV = 9, BTN_GLO = 10, BTN_SAVE = 11, BTN_HOME = 12, BTN_EDIT = 13,
        BTN_FX = 14, BTN_SEQ = 15, BTN_PLAY = 16, BTN_REC = 17 };
-enum { ENC_KNOB1 = 0, ENC_KNOB2 = 1, ENC_KNOB3 = 2, ENC_KNOB4 = 3, ENC_MASTER = 4, ENC_SELECT = 5, ENC_PRESETS = 6,
-       ENC_ALGORITHM = 7 };
+enum { ENC_KNOB1 = 0, ENC_KNOB2 = 1, ENC_KNOB3 = 2, ENC_KNOB4 = 3, ENC_ALGORITHM = 4, ENC_PRESETS = 5, ENC_SELECT = 6,
+       ENC_MASTER = 7 };
 #define KEY_LED(k) (32u + (k))
 #else
 enum { BTN_OCT_DOWN = 0, BTN_OCT_UP = 1, BTN_FX = 2, BTN_SEL = 3, BTN_ENV = 4, BTN_LFO = 5, BTN_EDIT = 6,
