@@ -1,0 +1,5 @@
+# boot on a saved store: dump what was loaded, then play the pattern 4 s (its sounds: the saved ones)
+3000 patches
+3200 btn 16
+7200 btn 16
+7600 end

@@ -19,6 +19,8 @@ enum {
     P_CHO_RATE, P_CHO_DEPTH, P_CHO_MIX,
     P_DLY_TIME, P_DLY_FB, P_DLY_TONE, P_DLY_MIX,
     P_REV_SIZE, P_REV_DAMP, P_REV_PRE, P_REV_MIX,
+    P_L2_SHAPE, P_L2_RATE, P_L2_DELAY, P_L2_DEST1, P_L2_AMT1, P_L2_DEST2, P_L2_AMT2,   /* LFO 2 (free-running, two
+                                                 * destinations; the 7 bytes that were spare: the name moved behind them) */
     NPARAM
 };
 #define PATCH_NAME 10u
@@ -30,7 +32,10 @@ enum {
 #define NFACT 64u
 
 enum { K_NUM, K_BIP, K_ONOFF, K_WAVE, K_FTYPE, K_MODE, K_LSHAPE, K_LPHASE, K_TO, K_ARP, K_DIV, K_SEMI, K_MS, K_HZ,
-       K_PCT, K_CUT, K_OCT, K_MORPH, K_DDIV };
+       K_PCT, K_CUT, K_OCT, K_MORPH, K_DDIV, K_L2DEST };
+/* LFO 2's destinations: what LFO 1 reaches and what it does not (resonance, pan, morph, cross-mod, noise, LFO 1 itself) */
+enum { L2_OFF, L2_PITCH, L2_OSC2, L2_PWM, L2_CUTOFF, L2_RESO, L2_AMP, L2_PAN, L2_MORPH, L2_XMOD, L2_NOISE, L2_L1RATE,
+       L2_L1DEPTH, NL2DEST };
 enum { W_OFF, W_SAW, W_PLS, W_BOTH };
 enum { F_LP12, F_HP12, F_BP12, F_NOTCH, F_LP24, F_SEM, NFTYPE };   /* SEM: LP .. notch .. HP by MORPH */
 enum { M_POLY, M_DUAL, M_UNISON, M_MONO };
@@ -109,6 +114,13 @@ static const pdef_t PDEF[NPARAM] = {
     [P_REV_DAMP] = {"DAMP", 127, 60, K_NUM, 0},
     [P_REV_PRE] = {"PRE-DLY", 127, 20, K_NUM, 0},
     [P_REV_MIX] = {"MIX", 127, 0, K_NUM, 0},
+    [P_L2_SHAPE] = {"SHAPE", 5, L_TRI, K_LSHAPE, 0},
+    [P_L2_RATE] = {"RATE", 127, 50, K_HZ, 0},
+    [P_L2_DELAY] = {"DELAY", 127, 0, K_NUM, 0},
+    [P_L2_DEST1] = {"DEST 1", NL2DEST - 1, L2_OFF, K_L2DEST, 0},
+    [P_L2_AMT1] = {"AMT 1", 127, 64, K_BIP, 0},
+    [P_L2_DEST2] = {"DEST 2", NL2DEST - 1, L2_OFF, K_L2DEST, 0},
+    [P_L2_AMT2] = {"AMT 2", 127, 64, K_BIP, 0},
 };
 
 static const char *const WAVE_NAME[4] = {"OFF", "SAW", "PULSE", "SAW+PLS"};
@@ -117,6 +129,8 @@ static const char *const MODE_NAME[4] = {"POLY", "DUAL", "UNISON", "MONO"};
 static const char *const LSHAPE_NAME[6] = {"TRI", "SAW", "RAMP", "SQUARE", "S&H", "RANDOM"};
 static const char *const LPHASE_NAME[3] = {"SYNC", "FREE", "SPREAD"};
 static const char *const TO_NAME[3] = {"OSC1", "OSC2", "BOTH"};
+static const char *const L2DEST_NAME[NL2DEST] = {"OFF", "PITCH", "OSC2", "PWM", "CUTOFF", "RESO", "AMP", "PAN", "MORPH",
+                                                 "X-MOD", "NOISE", "L1 RATE", "L1 DPTH"};
 static const char *const ARP_NAME[NARPMODE] = {"OFF", "UP", "DOWN", "UP/DN", "RANDOM", "PLAYED"};
 static const char *const DIV_NAME[NDIV] = {"1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32", "1/32T"};
 static const uint8_t DIV_PER_QUARTER[NDIV] = {1, 2, 3, 4, 6, 8, 12};
@@ -126,7 +140,7 @@ static const uint8_t DDIV_NUM[NDDIV] = {1, 1, 1, 3, 1, 3, 2}, DDIV_DEN[NDDIV] = 
 /* the pages: four knobs each (-1 = no knob) */
 typedef struct { const char *title; int8_t p[4]; } page_t;
 enum { PG_PERFORM, PG_OSC1, PG_OSC2, PG_VOICE, PG_OSCMOD, PG_FILTER, PG_FILTER2, PG_FENV, PG_AENV, PG_LFO, PG_LFODEST,
-       PG_LFO2, PG_ARP, PG_CHORUS, PG_DELAY, PG_REVERB, PG_DRIVE, PG_OUTPUT, PG_GLOBAL,   /* (3.3, as native 3.2) VOICE under EDIT, after OSC 2 */
+       PG_LFO2, PG_LFOB, PG_LFOBDEST, PG_ARP, PG_CHORUS, PG_DELAY, PG_REVERB, PG_DRIVE, PG_OUTPUT, PG_GLOBAL,   /* (3.3, as native 3.2) VOICE under EDIT, after OSC 2 */
        PG_MIXER, PG_SEQ, NPAGE };              /* the mixer (VIBE), the sequencer's step view: drawn by hand */
 static const page_t PAGE[NPAGE] = {
     [PG_PERFORM] = {"PERFORM", {P_CUTOFF, P_RESO, P_FENV_AMT, P_AR}},   /* (ALGORITHM picks the track now, as sloopDX) */
@@ -140,6 +154,8 @@ static const page_t PAGE[NPAGE] = {
     [PG_LFO] = {"LFO", {P_LFO_SHAPE, P_LFO_RATE, P_LFO_DELAY, P_LFO_PHASE}},
     [PG_LFODEST] = {"LFO DEST", {P_LFO_PITCH, P_LFO_PWM, P_LFO_FLT, P_LFO_AMP}},
     [PG_LFO2] = {"LFO +", {P_LFO_PITCH_TO, P_LFO_PWM_TO, -1, -1}},
+    [PG_LFOB] = {"LFO 2", {P_L2_SHAPE, P_L2_RATE, P_L2_DELAY, -1}},
+    [PG_LFOBDEST] = {"LFO 2 DEST", {P_L2_DEST1, P_L2_AMT1, P_L2_DEST2, P_L2_AMT2}},
     [PG_VOICE] = {"VOICE", {P_MODE, P_UNI_N, P_UNI_DET, P_GLIDE}},
     [PG_OUTPUT] = {"OUTPUT", {P_VINTAGE, P_SPREAD, P_BEND, P_VOLUME}},
     [PG_ARP] = {"ARP", {P_ARP_MODE, P_ARP_DIV, P_ARP_OCT, P_ARP_GATE}},

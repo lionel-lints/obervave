@@ -103,7 +103,8 @@ typedef struct {                                /* SET_VERSION 2 (1.4.3 and befo
 static uint32_t set_dirty, set_t;
 /* the user's programs: PS_N to a flash sector (psect_load / psect_save), all of them in RAM */
 #define PS_N 50u
-#define PS_TAG 0x50564F42u                      /* "BOVP" */
+#define PS_TAG 0x32564F42u                      /* "BOV2": the patches with LFO 2 (the name at NPARAM = 70) */
+#define PS_TAG_V3 0x50564F42u                   /* "BOVP": before LFO 2 (the name at 63): converted at boot (patch_from_v3) */
 typedef struct { uint32_t tag; uint8_t used[PS_N], pad[2]; patch_t p[PS_N]; } psect_t;
 _Static_assert(sizeof(psect_t) <= SETTINGS_MAX, "a program sector outgrew its flash sector");
 _Static_assert(NPSECT * PS_N >= NPROG, "too few program sectors");
@@ -208,6 +209,20 @@ static uint32_t level_of(uint32_t vel) { return vel <= 50u ? 0u : vel <= 85u ? 1
 static uint32_t seq_pages(uint32_t t) { return pat.trk[t].len ? (pat.trk[t].len + 15u) / 16u : 1u; }
 static uint8_t cc_map[128];                     /* MIDI CC -> parameter + 1, 0 = none */
 
+/* a patch saved before LFO 2 (OberVave 3.0-3.3, this fork until LFO 2): its 63 parameters stay, LFO 2's seven come in
+ * at their defaults (off), the name moves from byte 63 to NPARAM. Set explicitly: the 7 bytes behind the old name were
+ * spaces (0x20), which as LFO 2 would have moved every old sound */
+#define NPARAM_V3 63u
+_Static_assert(NPARAM == NPARAM_V3 + 7u && P_L2_SHAPE == NPARAM_V3, "LFO 2's seven follow the 63 of 3.x");
+static void patch_from_v3(patch_t *p)
+{
+    uint8_t nm[PATCH_NAME];
+    uint32_t i;
+    for (i = 0; i < PATCH_NAME; i++) nm[i] = p->v[NPARAM_V3 + i];
+    for (i = NPARAM_V3; i < NPARAM; i++) p->v[i] = PDEF[i].def;
+    for (i = 0; i < PATCH_NAME; i++) p->v[NPARAM + i] = nm[i];
+}
+
 static void prog_get(uint32_t n, patch_t *p)    /* program n: the user's, else the factory's (65-70: VIBE's, 71-99: INIT) */
 {
     n %= NPROG;
@@ -286,7 +301,8 @@ static uint32_t trk_silent(uint32_t t) { return ctl_mix_off >> (t % NTRK) & 1u; 
 /* ---- every pattern keeps its instruments and its mix (as VIBE's 3.0): the four tracks' sounds with their edits and
  * program numbers, the mixer (level, pan, the four sends, mute, solo), the effects and MASTER. They live behind the
  * pattern's steps in its flash slot, all eight sets in RAM; a pattern without its own set takes what is playing */
-#define PSN2_MAGIC 0x324E5350u                  /* "PSN2" */
+#define PSN2_MAGIC 0x334E5350u                  /* "PSN3": a pattern's sounds with LFO 2 (the name kept, the old name "PSN2") */
+#define PSN2_MAGIC_V3 0x324E5350u               /* "PSN2": before LFO 2: converted at boot (patch_from_v3) */
 typedef struct {
     uint8_t lvl[NTRK], cho[NTRK], dly[NTRK], rev[NTRK], drv[NTRK]; int8_t pan[NTRK];
     uint8_t mute, solo, fx[NFXP], dv_type, dv_amt, dv_tone, dv_mix, m_vol, m_dj, m_drive, m_comp;
@@ -689,6 +705,15 @@ static void randomize(void)
     d->v[P_DLY_MIX] = (uint8_t)(rn(0, 1) ? 0 : rn(20, 70));
     d->v[P_REV_SIZE] = (uint8_t)rn(40, 127);
     d->v[P_REV_MIX] = (uint8_t)(rn(0, 3) ? rn(15, 60) : 0);
+    if (!rn(0, 2)) {                            /* LFO 2 on a third of the dice (last: the draws above stay as they were) */
+        static const uint8_t L2PICK[] = {L2_PITCH, L2_OSC2, L2_PWM, L2_CUTOFF, L2_CUTOFF, L2_PAN, L2_PAN, L2_AMP, L2_MORPH, L2_L1RATE, L2_L1DEPTH};
+        int32_t a = (int32_t)rn(6, 30);
+        d->v[P_L2_SHAPE] = (uint8_t)rn(0, 5);
+        d->v[P_L2_RATE] = (uint8_t)rn(10, 90);
+        d->v[P_L2_DEST1] = L2PICK[rn(0, sizeof L2PICK - 1u)];
+        if (d->v[P_L2_DEST1] == L2_PITCH || d->v[P_L2_DEST1] == L2_OSC2) a = (int32_t)rn(3, 8);   /* (pitch: gently) */
+        d->v[P_L2_AMT1] = (uint8_t)(64 + (rn(0, 1) ? a : -a));
+    }
     trk_edited[seq_trk % NTRK] = 1;
     if (d == &live_p[0]) fx_keep(d);            /* (the dice leave the effects alone)*/
 }
@@ -728,6 +753,7 @@ static void param_value(char *s, uint32_t p, uint32_t v)   /* <= 7 characters */
     case K_LSHAPE: scat(s, LSHAPE_NAME[v % 6u]); break;
     case K_LPHASE: scat(s, LPHASE_NAME[v % 3u]); break;
     case K_TO: scat(s, TO_NAME[v % 3u]); break;
+    case K_L2DEST: scat(s, L2DEST_NAME[v % NL2DEST]); break;
     case K_ARP: scat(s, ARP_NAME[v % NARPMODE]); break;
     case K_DIV: scat(s, DIV_NAME[v % NDIV]); break;
     case K_DDIV: scat(s, DDIV_NAME[v % NDDIV]); break;
@@ -1247,6 +1273,11 @@ static void slot_lens_read(void)
     for (i = 0; i < NPAT; i++) {
         psnd[i].magic = 0;
         if (!slot_load(i, &undo_pat, sizeof undo_pat, &psnd[i], sizeof psnd[i]) && undo_pat.magic == PAT_MAGIC) {
+            if (psnd[i].magic == PSN2_MAGIC_V3) {   /* (its sounds saved before LFO 2: converted; the slot written anew at
+                                                 * its next save) */
+                for (t = 0; t < NTRK; t++) patch_from_v3(&psnd[i].p[t]);
+                psnd[i].magic = PSN2_MAGIC;
+            }
             if (psnd[i].magic != PSN2_MAGIC) psnd[i].magic = 0;
         } else {
             psnd[i].magic = 0;
@@ -2019,11 +2050,18 @@ static void app_main(void)
     cc_map_init();
     {
         uint32_t n;
-        for (n = 0; n < NPSECT; n++)
-            if (psect_load(n, &psect[n], sizeof psect[n]) || psect[n].tag != PS_TAG) {
+        for (n = 0; n < NPSECT; n++) {
+            if (psect_load(n, &psect[n], sizeof psect[n])) psect[n].tag = 0;
+            if (psect[n].tag == PS_TAG_V3) {    /* (saved before LFO 2: converted, written back in the new layout) */
+                uint32_t i;
+                for (i = 0; i < PS_N; i++) patch_from_v3(&psect[n].p[i]);
+                psect[n].tag = PS_TAG;
+                ps_dirty |= 1u << n;
+            } else if (psect[n].tag != PS_TAG) {
                 memset(&psect[n], 0, sizeof psect[n]);
                 psect[n].tag = PS_TAG;
             }
+        }
         set.version = 0;
         if (settings_load(&set, sizeof set) || set.version != SET_VERSION) {
             static set_v2_t old __attribute__((section(".pool")));
@@ -2225,7 +2263,7 @@ static void app_main(void)
             dirty_page = dirty_steps = dirty_tags = 1; leds_q = 0xFFFFFFFFu;
         }
         if (b & (1u << BTN_ENV)) np = cycle_page(PG_FENV, 2);
-        if (b & (1u << BTN_LFO)) np = cycle_page(PG_LFO, 3);
+        if (b & (1u << BTN_LFO)) np = cycle_page(PG_LFO, 5);   /* LFO, LFO DEST, LFO +, LFO 2, LFO 2 DEST */
         if (b & (1u << BTN_ARP)) {
             if (page == PG_ARP) { hold ^= 1u << (seq_trk % NTRK); ctl_hold = hold; dirty_tags = 1; }   /* on its page: the panel's sound's HOLD */
             else np = PG_ARP;
@@ -2446,7 +2484,7 @@ static void app_main(void)
         fm1_led_key(BTN_HOME, page == PG_PERFORM);
         fm1_led_key(BTN_EDIT, page >= PG_OSC1 && page <= PG_FILTER2);
         fm1_led_key(BTN_ENV, page == PG_FENV || page == PG_AENV);
-        fm1_led_key(BTN_LFO, page >= PG_LFO && page <= PG_LFO2);
+        fm1_led_key(BTN_LFO, page >= PG_LFO && page <= PG_LFOBDEST);
         fm1_led_key(BTN_FX, page >= PG_CHORUS && page <= PG_DRIVE);
         fm1_led_key(BTN_GLO, page >= PG_OUTPUT && page <= PG_GLOBAL);
         fm1_led_key(BTN_SAVE, save_armed);
@@ -2693,7 +2731,9 @@ static void host_wheels(void)                   /* (tests/host.c "wheels"): each
 #endif
     printf(" voices=");
     for (v = 0; v < NV; v++)
-        if (vc[v].gate) printf("%u:%u:%u:%u ", vc[v].part, vc[v].note, vc[v].inc1, vc[v].inc2);
+        if (vc[v].gate)                         /* part:note:OSC 1:OSC 2:PW 1:x-mod:noise:morph:gain L:gain R:amp:reso k */
+            printf("%u:%u:%u:%u:%u:%u:%d:%d:%d:%d:%d:%d ", vc[v].part, vc[v].note, vc[v].inc1, vc[v].inc2, vc[v].pw1, vc[v].xq_v,
+                   vc[v].ln_v, vc[v].morph_v, vc[v].gl, vc[v].gr, vc[v].amp1, vc[v].lc.k + vc[v].c1.k);
     printf("\n");
 }
 static void host_steps(void)                    /* (tests/host.c "steps"): every track's set steps, note/gate (T = tie) */
@@ -2717,5 +2757,26 @@ static void host_steps(void)                    /* (tests/host.c "steps"): every
             for (q = 0; q < SEQ_STEPS; q++) n += pat.lane[t][i].v[q] != AUTO_NONE;
             printf("%6u ms  LANE %c%u param=%s steps=%u\n", fm1_ms, "ABCD"[t], i, PDEF[pat.lane[t][i].param].name, n);
         }
+}
+#endif
+
+#ifdef OBV_HOST
+static void host_patches(void)                  /* (tests/host.c "patches"): the saved programs and each pattern's sounds, as bytes */
+{
+    uint32_t n, i, t, k;
+    for (n = 0; n < NPSECT; n++)
+        for (i = 0; i < PS_N; i++)
+            if (psect[n].used[i]) {
+                printf("%6u ms  PROG %u ", fm1_ms, n * PS_N + i + 1u);
+                for (k = 0; k < PATCH_BYTES; k++) printf("%02x", psect[n].p[i].v[k]);
+                printf("\n");
+            }
+    for (i = 0; i < NPAT; i++)
+        if (psnd[i].magic == PSN2_MAGIC)
+            for (t = 0; t < NTRK; t++) {
+                printf("%6u ms  PSND %u %u ", fm1_ms, i, t);
+                for (k = 0; k < PATCH_BYTES; k++) printf("%02x", psnd[i].p[t].v[k]);
+                printf("\n");
+            }
 }
 #endif

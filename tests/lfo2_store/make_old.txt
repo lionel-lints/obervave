@@ -1,0 +1,19 @@
+# (run on the firmware before LFO 2, OBV_STORE set) a user program and a pattern with its sounds saved in the old layout:
+# 07 FAT BASS, CUTOFF 99 and RESO 33 by CC, saved over program 7 (BT twice); C4 as the pen, steps 1, 3, 5 set; the
+# quiet saves write the program and the pattern (with its four sounds) by themselves
+3000 midi 0xC0 6 0
+3100 midi 0xB0 74 99
+3100 midi 0xB0 71 33
+3300 vel 100
+3300 keys 0x80
+3400 keys 0
+3600 pad 0 90
+3700 pad 0 0
+3800 pad 2 90
+3900 pad 2 0
+4000 pad 4 90
+4100 pad 4 0
+4400 btn 11
+4600 btn 11
+30000 patches
+30100 end

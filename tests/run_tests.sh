@@ -37,6 +37,8 @@ run "... the same on the SMK-37 build" "$OUT/arp_fuzz_smk" 600
 $CC -Ifirmware/hal -o "$OUT/smk_key_test" tests/smk_key_test.c
 run "SMK-37 keybed: fast, medium and slow presses (a slow one plays after 40 ms, once; genkigenki)" "$OUT/smk_key_test"
 run "OSC 2 its own vintage walk: locked at VINTAGE 0, the two beat as VINTAGE rises, no lasting pull" python3 tests/osc_drift_test.py
+run "LFO 2: every destination moves what it says (pitch, OSC 2, PWM, cutoff, reso, amp, pan, morph, x-mod, noise, LFO 1), two slots add, DELAY holds" python3 tests/lfo2_test.py
+run "LFO 2 and the patches saved before it: programs and pattern sounds come through, names kept, LFO 2 off, the pattern bit for bit" python3 tests/lfo2_store_test.py
 run "the whole panel fuzzed under ASan + UBSan (both boards): no memory error, no overflow" python3 tests/fuzz_ui.py --n 12 --seed 11
 run "hanging notes, fuzzed: 150 random bursts of keys, MIDI, programs, modes, tracks, layers, PLAY / REC" python3 tests/fuzz_notes.py --n 150 --seed 7 --transport
 

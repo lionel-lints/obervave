@@ -72,7 +72,7 @@ Everything from the FM-1 keeps its job, on the SMK button with the same meaning;
 | **PATCH** | HOME | PERFORM; held with a layer: lock it |
 | **PARA** | EDIT | OSC / FILTER pages; held: the erase layer |
 | **CHORD** | ENV | the envelope pages |
-| **NOTE REPEAT** | LFO | the LFO pages |
+| **NOTE REPEAT** | LFO | the LFO pages: LFO, LFO DEST, LFO +, then LFO 2 and LFO 2 DEST |
 | **SCALE** | SEL | with BT held: a random sound |
 | **GLOBE** | GLO | GLOBAL / OUTPUT; held: start / stop, mute, solo, tap tempo, on the keys and on the pads (they show it) |
 | **BT** | SAVE | twice: save the program; in the sequencer: save the pattern now; held: white keys or pads 1-8 go to pattern 1-8 (the pads show them), black keys copy there |

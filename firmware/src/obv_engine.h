@@ -40,6 +40,11 @@ typedef struct {
     uint8_t note, vel, gate;                    /* gate: the key (or the arp) holds it */
     uint8_t part;                               /* the track whose sound it is, 0..3 */
     uint8_t grp;                                /* a card of its sound's MONO / UNISON group */
+    uint32_t lfo2_blk;                          /* LFO 2: blocks since the note on (its delay / fade-in) */
+    int32_t lfo2_fade;                          /* Q15 */
+    int32_t pan0, pan_mod;                      /* the voice's pan without LFO 2; 1 while LFO 2 moves it */
+    int32_t ln_v, morph_v;                      /* this block's noise level, SEM morph: the sound's, or LFO 2's on them */
+    uint32_t xq_v;                              /* ... and cross-mod */
 } voice_t;
 
 /* four sounds, one per track (A's also sets the effects). The main loop writes, the ISR reads. */
@@ -113,6 +118,9 @@ typedef struct {
     int32_t lvl1, lvl2, lvln, drive_q12, reso_k, lad_k, vint, sus_f, sus_a, gain_q12, morph_q;
     int32_t cut_sm, reso_sm;                    /* CUTOFF and RESO slewed (Q8), ~25 ms: a CC sweep in semitone steps glides */
     uint32_t pw1_base, pw2_base, w1, w2, ftype, sync_on, xmod_q, glide_k;
+    uint32_t lfo2_ph, lfo2_rnd_a, lfo2_rnd_b;   /* LFO 2: free-running, never restarted */
+    int32_t lfo2_val;                           /* this block, Q15 */
+    int32_t l1_depth, l1_depth_on;              /* LFO 2 on LFO 1's depth: its gain, Q15 (32767 = as it is) */
 } part_t;
 static part_t pt[NPART] = {{&live_p[0], 0, 0, 0, 0, 60 << 16}, {&live_p[1], 0, 0, 0, 0, 60 << 16},
                             {&live_p[2], 0, 0, 0, 0, 60 << 16}, {&live_p[3], 0, 0, 0, 0, 60 << 16}};
@@ -134,6 +142,7 @@ static const int8_t PAN_CARD[NCARD] = {-40, 40, -24, 24, -56, 56, -10, 10};     
 static void voice_pan(voice_t *v, int32_t pan)   /* -64..64 */
 {
     uint32_t pos = (uint32_t)(clampi(pan, -64, 64) + 64);
+    v->pan0 = pan;
     v->gl = PAN_Q12[128u - pos];
     v->gr = PAN_Q12[pos];
 }
@@ -153,6 +162,8 @@ static void voice_start(voice_t *v, uint32_t part, uint32_t note, uint32_t vel, 
     v->ae.stage = E_ATT;
     v->lfo_blk = 0;
     v->lfo_fade = pv[P_LFO_DELAY] ? 0 : 32767;
+    v->lfo2_blk = 0;
+    v->lfo2_fade = pv[P_L2_DELAY] ? 0 : 32767;
     voice_pan(v, pan);
 }
 
@@ -560,7 +571,7 @@ static inline void env_tick(env_t *e, uint32_t a, uint32_t d, int32_t sus, uint3
 }
 
 /* ---- the LFO (global; per voice a phase offset in SPREAD and a delay / fade) */
-static int32_t lfo_shape(const part_t *g, uint32_t ph, uint32_t shape)
+static int32_t lfo_shape_r(uint32_t ph, uint32_t shape, uint32_t rnd_a, uint32_t rnd_b)
 {
     int32_t p;
     switch (shape) {
@@ -570,20 +581,46 @@ static int32_t lfo_shape(const part_t *g, uint32_t ph, uint32_t shape)
     case L_SAW: return 32767 - (int32_t)(ph >> 16);
     case L_RAMP: return (int32_t)(ph >> 16) - 32768;
     case L_SQR: return ph < 0x80000000u ? 32767 : -32767;
-    case L_SH: return (int32_t)(g->lfo_rnd_b >> 16) - 32768;
+    case L_SH: return (int32_t)(rnd_b >> 16) - 32768;
     default: {                                  /* smooth random: a line from one random value to the next */
-        int32_t a = (int32_t)(g->lfo_rnd_a >> 16) - 32768, b = (int32_t)(g->lfo_rnd_b >> 16) - 32768;
+        int32_t a = (int32_t)(rnd_a >> 16) - 32768, b = (int32_t)(rnd_b >> 16) - 32768;
         return a + (int32_t)(((int64_t)(b - a) * (ph >> 8)) >> 24);
     }
     }
 }
 
+static int32_t lfo_shape(const part_t *g, uint32_t ph, uint32_t shape) { return lfo_shape_r(ph, shape, g->lfo_rnd_a, g->lfo_rnd_b); }
+
+/* LFO 2's amount: -64..63 squared with its sign (-64..62): fine near 0, the whole range at the ends */
+static int32_t l2_q(uint32_t amt) { int32_t a = (int32_t)amt - 64; return a * (a < 0 ? -a : a) / 64; }
+/* the sum of LFO 2's amounts on destination d (both slots may go to the same) */
+static int32_t l2_amt(const uint8_t *pv, uint32_t d)
+{
+    return (pv[P_L2_DEST1] == d ? l2_q(pv[P_L2_AMT1]) : 0) + (pv[P_L2_DEST2] == d ? l2_q(pv[P_L2_AMT2]) : 0);
+}
+
+static uint32_t l2_rnd_state = 0x7F4A7C15u;    /* LFO 2's own random numbers: it runs unused too, and the shared ones
+                                                 * (LFO 1's S&H, the arp's RANDOM, the steps' chance) keep their order */
+static void lfo2_tick(part_t *g)                /* free-running: its phase is never restarted by a note */
+{
+    uint32_t old = g->lfo2_ph;
+    g->lfo2_ph += LFO_INC[g->p->v[P_L2_RATE] & 127u];
+    if (g->lfo2_ph < old) { g->lfo2_rnd_a = g->lfo2_rnd_b; g->lfo2_rnd_b = xorshift(&l2_rnd_state); }
+    g->lfo2_val = lfo_shape_r(g->lfo2_ph, g->p->v[P_L2_SHAPE], g->lfo2_rnd_a, g->lfo2_rnd_b);
+}
+
 static void lfo_tick(part_t *g)
 {
-    uint32_t inc = LFO_INC[g->p->v[P_LFO_RATE]], old = g->lfo_ph;
+    const uint8_t *pv = g->p->v;
+    uint32_t inc = LFO_INC[pv[P_LFO_RATE]], old = g->lfo_ph;
+    int32_t q = l2_amt(pv, L2_L1RATE);
+    if (q) inc = LFO_INC[clampi((int32_t)pv[P_LFO_RATE] + ((g->lfo2_val * q * 2) >> 15), 0, 127)];   /* LFO 2 on its rate */
     g->lfo_ph += inc;
     if (g->lfo_ph < old) { g->lfo_rnd_a = g->lfo_rnd_b; g->lfo_rnd_b = xorshift(&rnd_state); }
-    g->lfo_val = lfo_shape(g, g->lfo_ph, g->p->v[P_LFO_SHAPE]);
+    g->lfo_val = lfo_shape(g, g->lfo_ph, pv[P_LFO_SHAPE]);
+    q = l2_amt(pv, L2_L1DEPTH);                 /* LFO 2 on its depth: 0 .. twice, half way: as it is */
+    g->l1_depth_on = q != 0;
+    g->l1_depth = clampi(32767 + (g->lfo2_val * q) / 64, 0, 65534);
 }
 
 /* ---- one control block for a voice: pitch, cutoff, envelopes, amp */
@@ -641,6 +678,7 @@ static void voice_block(voice_t *v, uint32_t card)
     const part_t *g = &pt[v->part];
     const uint8_t *pv = g->p->v;
     int32_t lfo, p8, p1, p2, cut, fenv, tmp, velg, trem, vint = g->vint, vt = (vint * VINT_ENV[card % NCARD]) >> 7, lfo_to, a;
+    int32_t m2, q2p, q2o, q2w, q2c, q2r, q2a, q2n, q2m, q2x, q2z;   /* LFO 2: its value here, its amount on each destination */
     uint32_t ph, glide_k = g->glide_k;
     /* glide */
     if (v->pitch16 != v->target16) {
@@ -665,6 +703,17 @@ static void voice_block(voice_t *v, uint32_t card)
         v->lfo_blk++;
     }
     lfo = (lfo * v->lfo_fade) >> 15;
+    if (g->l1_depth_on) lfo = (lfo * g->l1_depth) >> 15;   /* LFO 2 on LFO 1's depth */
+    /* LFO 2 as this voice sees it: its own delay / fade-in; each destination's amount (0: that one as before) */
+    if (v->lfo2_fade < 32767) {
+        uint32_t dl = LFO_DELAY_BLK[pv[P_L2_DELAY]];
+        if (v->lfo2_blk >= dl) { v->lfo2_fade += 32767 / (int32_t)(dl / 2u + 1u) + 1; if (v->lfo2_fade > 32767) v->lfo2_fade = 32767; }
+        v->lfo2_blk++;
+    }
+    m2 = (g->lfo2_val * v->lfo2_fade) >> 15;
+    q2p = l2_amt(pv, L2_PITCH); q2o = l2_amt(pv, L2_OSC2); q2w = l2_amt(pv, L2_PWM); q2c = l2_amt(pv, L2_CUTOFF);
+    q2r = l2_amt(pv, L2_RESO); q2a = l2_amt(pv, L2_AMP); q2n = l2_amt(pv, L2_PAN); q2m = l2_amt(pv, L2_MORPH);
+    q2x = l2_amt(pv, L2_XMOD); q2z = l2_amt(pv, L2_NOISE);
     /* vintage: a slow random walk on the pitch */
     v->drift += (int32_t)(xorshift(&v->noise) & 31u) - 16;
     v->drift -= v->drift >> 11;
@@ -680,23 +729,49 @@ static void voice_block(voice_t *v, uint32_t card)
     p1 = p8 + (pv[P_LFO_PITCH_TO] != TO_O2 ? lfo_to : 0);
     p2 = p8 + (pv[P_LFO_PITCH_TO] != TO_O1 ? lfo_to : 0) + ((int32_t)pv[P_O2_SEMI] - 24) * 256 + g->det_fine8
        + ((fenv * g->env_o2 * 97) >> 15) + (((v->drift2 - v->drift) * vint) >> 10);   /* OSC 2 on its own walk */
+    if (q2p) { int32_t d = (m2 * q2p * 48) >> 15; p1 += d; p2 += d; }   /* LFO 2: +-12 semitones at full */
+    if (q2o) p2 += (m2 * q2o * 48) >> 15;
     v->inc1 = pitch_inc(p1);
     v->inc2 = pitch_inc(p2);
     tmp = (lfo * g->lfo_pwd);
-    v->pw1 = pw_mod(g->pw1_base, pv[P_LFO_PWM_TO] != TO_O2 ? tmp : 0);
-    v->pw2 = pw_mod(g->pw2_base, pv[P_LFO_PWM_TO] != TO_O1 ? tmp : 0);
+    {
+        int32_t t2 = q2w ? m2 * q2w * 2 : 0;    /* LFO 2 on both pulse widths: LFO 1's whole depth at full */
+        v->pw1 = pw_mod(g->pw1_base, (pv[P_LFO_PWM_TO] != TO_O2 ? tmp : 0) + t2);
+        v->pw2 = pw_mod(g->pw2_base, (pv[P_LFO_PWM_TO] != TO_O1 ? tmp : 0) + t2);
+    }
     /* cutoff, Q8 semitones */
     cut = g->cut_sm + 8 * 256 + ((fenv * g->fenv_amt * 390) >> 15)
         + ((int32_t)v->note - 60) * g->keytrk * 2 + (((int32_t)v->vel - 64) * g->velflt >> 1)
         + ((lfo * g->lfo_fd * 97) >> 15) + ((lfo * g->wheel_q * 48) >> 15) + ((VINT_CUT8[card % NCARD] * vint) >> 7)
         + ((v->drift * vint) >> 7);             /* the vintage walk on the cutoff too: ~1/4 semitone at the default */
-    if (g->ftype == F_LP24) lad_coef(&v->lc, cut, g->lad_k);
+    if (q2c) cut += (m2 * q2c * 192) >> 15;     /* LFO 2: +-48 semitones at full, as LFO 1 */
+    if (q2r) {                                  /* LFO 2 on the resonance: this voice's own (the sound's RESO +-127) */
+        int32_t rs = clampi(g->reso_sm + ((m2 * q2r * 2) >> 15) * 256, 0, 127 * 256), rk = 8192 - rs * 8400 / (127 * 256);
+        if (g->ftype == F_LP24) lad_coef(&v->lc, cut, (8192 - rk) >> 1);
+        else svf_coef(&v->c1, cut, rk);
+    } else if (g->ftype == F_LP24) lad_coef(&v->lc, cut, g->lad_k);
     else svf_coef(&v->c1, cut, g->reso_k);
+    /* LFO 2 on the sound's noise, SEM morph and cross-mod: this voice's own copies (the sound's when it does not) */
+    v->morph_v = q2m ? clampi(g->morph_q + ((m2 * q2m * 2) >> 15), 0, 127) : g->morph_q;
+    if (q2x) { int32_t x = clampi((int32_t)pv[P_XMOD] + ((m2 * q2x * 2) >> 15), 0, 127); v->xq_v = (uint32_t)((x * x) >> 7); }
+    else v->xq_v = g->xmod_q;
+    if (q2z) { int32_t z = clampi((int32_t)pv[P_NOISE] + ((m2 * q2z * 2) >> 15), 0, 127); v->ln_v = (z * z) >> 7; }
+    else v->ln_v = g->lvln;
+    if (q2n || v->pan_mod) {                    /* LFO 2 on the pan (+-64 at full), from the voice's own; back to it after */
+        uint32_t pos = (uint32_t)(clampi(v->pan0 + (q2n ? (m2 * q2n) >> 15 : 0), -64, 64) + 64);
+        v->gl = PAN_Q12[128u - pos];
+        v->gr = PAN_Q12[pos];
+        v->pan_mod = q2n != 0;
+    }
     /* amp */
     velg = 32767 - ((((127 - (int32_t)v->vel) * (int32_t)pv[P_VEL_AMP]) >> 7) * 258);
     trem = 32767 - (((32767 - lfo) * g->lfo_ad) >> 8);
     v->amp0 = v->amp1;
     a = (int32_t)(((int64_t)(v->ae.level >> 9) * velg >> 15) * trem >> 15);
+    if (q2a) {                                  /* LFO 2 on the level: a tremolo, to silence at full (minus: the other way up) */
+        int32_t mm = q2a < 0 ? -m2 : m2, aq = q2a < 0 ? -q2a : q2a;
+        a = (a * (32767 - (((32767 - mm) * aq) >> 7))) >> 15;
+    }
     v->amp1 = (a * g->gain_q12) >> 12;          /* the sound's VOLUME */
     ui_vlevel[card] = a;
     ui_vnote[card] = v->note;
@@ -708,8 +783,9 @@ static void voice_render(voice_t *v, int32_t *out)
     uint32_t i, inc1 = v->inc1, inc2 = v->inc2, pw1 = v->pw1, pw2 = v->pw2, d1 = inc1 >> 15, d2 = inc2 >> 15;
     int32_t amp0 = v->amp0, da = v->amp1 - v->amp0, gl = v->gl, gr = v->gr, o2n = v->o2.prev;
     const part_t *g = &pt[v->part];
-    int32_t l1 = g->lvl1, l2 = g->lvl2, ln = g->lvln, drv = g->drive_q12, morph_q = g->morph_q;
-    uint32_t ft = g->ftype, xq = g->xmod_q, sy = g->sync_on, ww1 = g->w1, ww2 = g->w2;
+    int32_t l1 = g->lvl1, l2 = g->lvl2, ln = v->ln_v, drv = g->drive_q12, morph_q = v->morph_v;   /* (ln, morph, xq: this voice's,
+                                                                                                * voice_block: LFO 2 may move them) */
+    uint32_t ft = g->ftype, xq = v->xq_v, sy = g->sync_on, ww1 = g->w1, ww2 = g->w2;
     int32_t hw1 = (ww1 & OSC_SAW ? -65536 : 0) + (ww1 & OSC_PLS ? -65536 : 0);
     int32_t hw2 = (ww2 & OSC_SAW ? -65536 : 0) + (ww2 & OSC_PLS ? -65536 : 0);
     for (i = 0; i < CTL; i++) {
@@ -773,7 +849,7 @@ static void engine_audio(int32_t *out, uint32_t n)
         if (ctl_arp_restart) { ctl_arp_restart = 0; for (p = 0; p < NPART; p++) { arp[p].pos = 0; arp[p].cnt = 0xFFFFFFFFu; } }
         for (p = 0; p < NPART; p++) arp_tick(p);
         seq_tick();                             /* (may swap the pattern in) */
-        for (p = 0; p < NPART; p++) { lfo_tick(&pt[p]); block_globals(&pt[p]); }
+        for (p = 0; p < NPART; p++) { lfo2_tick(&pt[p]); lfo_tick(&pt[p]); block_globals(&pt[p]); }
         for (v = 0; v < NV; v++) {
             if (vc[v].ae.stage == E_IDLE && !vc[v].gate) {
                 if (ui_vlevel[v]) { ui_vlevel[v] = 0; vc[v].amp0 = vc[v].amp1 = 0; }

@@ -66,6 +66,7 @@ static struct { uint32_t notes, buttons; } fm1_in;
 static void host_voices(void);                  /* (obervave.c; any build) */
 static void host_steps(void);
 static void host_wheels(void);
+static void host_patches(void);
 static uint32_t host_edges, host_rel, host_rel_next;   /* press edges, release edges (a tap's release: the call after) */
 static uint32_t fm1_input_edges(uint32_t *released)
 {
@@ -240,7 +241,7 @@ typedef struct { uint32_t t, keys; int btn; uint8_t st, d1, d2; int8_t enc, encn
  * P hit at velocity V, V 0 = let go), "T fader F V" (0..127), "T wheel W RAW" (0 pitch, 1 mod; raw ADC 0..1023),
  * "T xkey K V" (keybed key K 0..36 at V, 0 = let go: the outer keys 0..4, 32..36), "T dump" (pads and state);
  * any build: "T shot" (the screen at T -> OUT-T.ppm) */
-enum { HS_NONE, HS_VEL, HS_PAD, HS_FADER, HS_WHEEL, HS_XKEY, HS_DUMP, HS_SHOT, HS_CHECK, HS_VOICES, HS_STEPS, HS_WHEELS };
+enum { HS_NONE, HS_VEL, HS_PAD, HS_FADER, HS_WHEEL, HS_XKEY, HS_DUMP, HS_SHOT, HS_CHECK, HS_VOICES, HS_STEPS, HS_WHEELS, HS_PATCHES };
 /* any build: "T voices" prints the voices still gated, the held keys, sustain and HOLD (tests/fuzz_notes.py); "T steps"
  * every track's set steps with their gates (tests/rec_track_test.py); "T wheels" each track's bend and vibrato and each
  * sounding voice's pitch (tests/wheels_test.py) */
@@ -286,7 +287,8 @@ static void read_script(const char *path)
         else if (!strcmp(what, "shot")) e.smk = HS_SHOT;
         else if (!strcmp(what, "voices")) e.smk = HS_VOICES;
         else if (!strcmp(what, "steps")) e.smk = HS_STEPS;
-        else if (!strcmp(what, "wheels")) e.smk = HS_WHEELS;   /* (any board: the screen now -> OUT-<ms>.ppm) */
+        else if (!strcmp(what, "wheels")) e.smk = HS_WHEELS;
+        else if (!strcmp(what, "patches")) e.smk = HS_PATCHES;   /* (any board: the screen now -> OUT-<ms>.ppm) */
         else if (!strcmp(what, "midi")) { sscanf(line, "%*u %*s %i %u %u", (int *)&a, &b, &c); e.st = (uint8_t)a; e.d1 = (uint8_t)b; e.d2 = (uint8_t)c; }
         else continue;
         ev[n++] = e;
@@ -377,6 +379,8 @@ static void platform_poll(void)                 /* one call = one millisecond */
             host_steps();
         } else if (script[step].smk == HS_WHEELS) {
             host_wheels();
+        } else if (script[step].smk == HS_PATCHES) {
+            host_patches();
         } else if (script[step].smk) {
 #if BOARD_SMK37
             static uint32_t vel = 100;
@@ -461,8 +465,24 @@ static void platform_poll(void)                 /* one call = one millisecond */
     }
 }
 
+/* OBV_STORE=file: the simulated flash (settings, programs, blobs, pattern slots) read from the file at the start and
+ * written back at the end, so one build can boot on what another saved (tests/lfo2_store_test.py) */
+static void store_io(int save)
+{
+    const char *path = getenv("OBV_STORE");
+    FILE *f;
+    if (!path || !(f = fopen(path, save ? "wb" : "rb"))) return;
+    if (save) { fwrite(host_store, 1, sizeof host_store, f); fwrite(host_blob, 1, sizeof host_blob, f); fwrite(host_slot, 1, sizeof host_slot, f); }
+    else if (fread(host_store, 1, sizeof host_store, f) != sizeof host_store || fread(host_blob, 1, sizeof host_blob, f) != sizeof host_blob
+             || fread(host_slot, 1, sizeof host_slot, f) != sizeof host_slot) { fprintf(stderr, "OBV_STORE: short file\n"); exit(1); }
+    fclose(f);
+}
+static void store_save(void) { store_io(1); }
+
 int main(int argc, char **argv)
 {
+    store_io(0);
+    atexit(store_save);
     if (argc > 1) host_out = argv[1];
     if (argc > 2) read_script(argv[2]);
     if (argc > 3) frame_fps = (uint32_t)atoi(argv[3]);
