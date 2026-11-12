@@ -29,7 +29,13 @@ run "recording: a note held through a K3 track change ends on the track it began
 run "knob speed: detents a second, not detents a main-loop pass (slow stays slow, a spin speeds up)" python3 tests/knob_speed_test.py
 $CC -o "$OUT/wheel_route_test" tests/wheel_route_test.c
 run "the wheels go to a track: owner to the rest, K3 mid-bend, two sources, channels, the scope fixed at the bend's start" "$OUT/wheel_route_test"
-run "the wheels end to end: each track's voices bend alone, across K3 turns, MIDI OMNI and channels B-D (both boards)" python3 tests/wheels_test.py
+run "the wheels end to end: each track's voices bend alone, across track changes, MIDI OMNI and channels B-D (both boards)" python3 tests/wheels_test.py
+$CC -DOBV_HOST -Ifirmware/src -Ifirmware/gen -o "$OUT/arp_fuzz" tests/arp_fuzz.c
+run "stuck notes, fuzzed with the arps, pedal, HOLD, modes, programs (genkigenki's, four tracks): every voice held, none left" "$OUT/arp_fuzz" 600
+$CC -DOBV_HOST -DBOARD_SMK37=1 -Ifirmware/src -Ifirmware/gen -o "$OUT/arp_fuzz_smk" tests/arp_fuzz.c
+run "... the same on the SMK-37 build" "$OUT/arp_fuzz_smk" 600
+$CC -Ifirmware/hal -o "$OUT/smk_key_test" tests/smk_key_test.c
+run "SMK-37 keybed: fast, medium and slow presses (a slow one plays after 40 ms, once; genkigenki)" "$OUT/smk_key_test"
 run "the whole panel fuzzed under ASan + UBSan (both boards): no memory error, no overflow" python3 tests/fuzz_ui.py --n 12 --seed 11
 run "hanging notes, fuzzed: 150 random bursts of keys, MIDI, programs, modes, tracks, layers, PLAY / REC" python3 tests/fuzz_notes.py --n 150 --seed 7 --transport
 
