@@ -128,6 +128,18 @@ GPL-3.0. Identity `FM-1_95N`. Name by the user ("OberVave": Ober... + M-VAVE).
 
 ## Status (2026-10-13, third session)
 
+**Community PRs taken in (2026-11-12, branch `community`; this fork goes its own way from here):** upstream left
+outside PRs unreviewed, so the good ones live here, their authors kept:
+- **#25 (adub671): MIDI clock phase lock** (a PI loop on each beat's length, one quarter latched per beat; no drift
+  against a master after START). tests/clock_sync_test.py.
+- **#1 (genkigenki): SMK-37 K1-K4 are the page's knobs** (by the screen); then this fork's own order from the sound out
+  to the whole: **K5 track (ALGORITHM), K6 program (PRESETS), K7 tempo (SELECT), K8 MASTER at the edge** (`ENC_*` in
+  platform.c, `SMK_ENC_MASTER` 7). Every SMK test script and the fuzzers were remapped. Older notes below say K3 / K4
+  for track / program and K5-K8 for the page: that was the layout then.
+- **#4 (genkigenki): slow key presses** play after 40 ms with contact 1 alone (`SMK_KEY_TMAX_MS`), **the outer keys
+  read while the screen draws** (`smk_outer` from `app_idle`); `tests/arp_fuzz.c` ported to four tracks (every voice
+  held after every block; the arps, pedal, HOLD per sound, modes, programs). Its engine fixes were already here.
+
 **SMK-37 performance (2026-11-09, branch `smk-features`, after `notes-fixes`; played on the SMK-37 Elite):**
 - **Knob speed** in detents a second (`enc_accel`: >= 25 over at most 150 ms), not "more than one detent this
   main-loop pass": a pass is a few ms to tens (the screen), so a gentle turn in a long pass jumped x3 (LENGTH a page
