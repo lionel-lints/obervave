@@ -201,12 +201,30 @@ static const uint8_t PF_BREATH_PAD[] = {P_O1_WAVE, W_PLS, P_O1_PW, 64, P_O1_LVL,
     P_LFO_DELAY, 0, P_LFO_PHASE, LP_SPREAD, P_LFO_PWM, 60, P_LFO_PWM_TO, TO_BOTH, P_L2_SHAPE, L_TRI, P_L2_RATE, 13,
     P_L2_DEST1, L2_CUTOFF, P_L2_AMT1, 74, P_L2_DEST2, L2_PAN, P_L2_AMT2, 79, P_VINTAGE, 50, P_SPREAD, 80,
     P_REV_SIZE, 100, P_REV_MIX, 30, P_VOLUME, 80, X};
+/* 72: a flute – one triangle, a quiet one an octave up for the edge, breath (noise), the filter tracking the keys
+ * fully, a delayed vibrato; mono with a touch of glide */
+static const uint8_t PF_TRI_FLUTE[] = {P_MODE, M_MONO, P_GLIDE, 12, P_O1_WAVE, W_TRI, P_O1_LVL, 110, P_O2_WAVE, W_TRI,
+    P_O2_SEMI, 36, P_O2_LVL, 25, P_O2_FINE, 64, P_NOISE, 14, P_FTYPE, F_LP12, P_CUTOFF, 88, P_RESO, 0, P_FENV_AMT, 74,
+    P_KEYTRK, 127, P_FA, 60, P_FD, 90, P_FS, 60, P_FR, 80, P_AA, 62, P_AD, 90, P_AS, 115, P_AR, 78, P_VEL_AMP, 70,
+    P_LFO_SHAPE, L_TRI, P_LFO_RATE, 93, P_LFO_PITCH, 9, P_LFO_DELAY, 80, P_LFO_PHASE, LP_SYNC, P_VINTAGE, 20,
+    P_REV_SIZE, 90, P_REV_MIX, 30, P_VOLUME, 120, X};
+/* 73: a bass – a saw on top, the triangle an octave under it as the sub, the ladder closing quickly; mono */
+static const uint8_t PF_SUB_TRI[] = {P_MODE, M_MONO, P_GLIDE, 8, P_O1_WAVE, W_SAW, P_O1_LVL, 95, P_O2_WAVE, W_TRI,
+    P_O2_SEMI, 12, P_O2_LVL, 120, P_O2_FINE, 64, P_FTYPE, F_LP24, P_CUTOFF, 50, P_RESO, 25, P_FENV_AMT, 100,
+    P_FA, 0, P_FD, 80, P_FS, 30, P_FR, 60, P_AA, 2, P_AD, 90, P_AS, 110, P_AR, 60, P_DRIVE, 20, P_VINTAGE, 15,
+    P_REV_MIX, 0, P_VOLUME, 115, X};
+/* 74: a soft sync pluck – triangle on triangle, OSC 2 synced a fifth up and swept down by the filter envelope;
+ * poly, chorus, a dotted-eighth delay */
+static const uint8_t PF_TRI_SYNC[] = {P_O1_WAVE, W_TRI, P_O1_LVL, 50, P_O2_WAVE, W_TRI, P_SYNC, 1, P_O2_SEMI, 31,
+    P_O2_LVL, 110, P_ENV_O2, 96, P_FTYPE, F_LP12, P_CUTOFF, 85, P_RESO, 10, P_FENV_AMT, 80, P_FA, 0, P_FD, 92,
+    P_FS, 40, P_FR, 85, P_AA, 10, P_AD, 95, P_AS, 90, P_AR, 88, P_SPREAD, 90, P_VINTAGE, 35, P_CHO_MIX, 45,
+    P_DLY_TIME, DD_8D, P_DLY_FB, 35, P_DLY_MIX, 25, P_REV_SIZE, 80, P_REV_MIX, 25, P_VOLUME, 120, X};
 #undef X
 
-static const factory_t FACT_INIT = {"INIT", PF_INIT};   /* 72-99 */
-static const factory_t FACT_VIBE[] = {                  /* 65-70 (VIBE): drums and keys; 71: this fork's */
+static const factory_t FACT_INIT = {"INIT", PF_INIT};   /* 75-99 */
+static const factory_t FACT_VIBE[] = {                  /* 65-70 (VIBE): drums and keys; 71-74: this fork's */
     {"KICK", PF_KICK}, {"SNARE", PF_SNARE}, {"HIHAT", PF_HIHAT}, {"CLAP", PF_CLAP}, {"E-PIANO", PF_EPIANO}, {"WURLI", PF_WURLI},
-    {"BREATH PAD", PF_BREATH_PAD}};
+    {"BREATH PAD", PF_BREATH_PAD}, {"TRI FLUTE", PF_TRI_FLUTE}, {"SUB TRI", PF_SUB_TRI}, {"TRI SYNC", PF_TRI_SYNC}};
 #define NVIBE (sizeof FACT_VIBE / sizeof FACT_VIBE[0])
 static const factory_t FACTORY[NFACT] = {
     {"DARK ARP", PF_DARK_ARP}, {"POLY BRASS", PF_POLY_BRASS}, {"SYNC LEAD", PF_SYNC_LEAD}, {"UNISON LD", PF_UNISON_LEAD},
