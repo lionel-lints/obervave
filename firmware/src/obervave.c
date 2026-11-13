@@ -2483,7 +2483,7 @@ static void app_main(void)
             fm1_led_key(BTN_REC, lit >> 31 & 1u);
         }
         fm1_led_key(BTN_SEQ, seq_shown());
-        fm1_led_key(BTN_HOME, page == PG_PERFORM);
+        fm1_led_key(BTN_HOME, page == PG_PERFORM || page == PG_MIXER);   /* (HOME again is the MIXER: lit there too) */
         fm1_led_key(BTN_EDIT, page >= PG_OSC1 && page <= PG_FILTER2);
         fm1_led_key(BTN_ENV, page == PG_FENV || page == PG_AENV);
         fm1_led_key(BTN_LFO, page >= PG_LFO && page <= PG_LFOBDEST);
