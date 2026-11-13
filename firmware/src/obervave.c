@@ -657,6 +657,23 @@ static void set_param_in(patch_t *d, uint32_t p, int32_t v)
 }
 static void set_param(uint32_t p, int32_t v) { set_param_in(ed_patch(p), p, v); }
 
+static uint32_t param_pos(uint32_t p, uint32_t v)   /* a stored value -> where it sits on its knob (FT_ORDER) */
+{
+    uint32_t i;
+    if (p != P_FTYPE) return v;
+    for (i = 0; i < NFTYPE && FT_ORDER[i] != v; i++) ;
+    return i < NFTYPE ? i : 0u;
+}
+static int32_t param_at(uint32_t p, int32_t pos)   /* ... and back, clamped */
+{
+    pos = clampi(pos, 0, PDEF[p].max);
+    return p == P_FTYPE ? FT_ORDER[pos] : pos;
+}
+static int32_t param_cc(uint32_t p, uint32_t v)   /* a CC / fader 0..127 -> the stored value */
+{
+    return param_at(p, PDEF[p].max == 127 ? (int32_t)v : ((int32_t)v * PDEF[p].max + 63) / 127);
+}
+
 /* REC: a new sound within useful ranges */
 static uint32_t rnd;
 static uint32_t rn(uint32_t lo, uint32_t hi) { return lo + xorshift(&rnd) % (hi - lo + 1u); }
@@ -665,8 +682,8 @@ static void randomize(void)
     uint32_t i, r;
     patch_t *d = &live_p[seq_trk % NTRK];
     for (i = 0; i < NPARAM; i++) d->v[i] = PDEF[i].def;
-    d->v[P_O1_WAVE] = (uint8_t)rn(1, 3);
-    d->v[P_O2_WAVE] = (uint8_t)rn(0, 3);
+    d->v[P_O1_WAVE] = (uint8_t)rn(1, 4);       /* (4: TRI) */
+    d->v[P_O2_WAVE] = (uint8_t)rn(0, 4);
     d->v[P_O1_PW] = (uint8_t)rn(10, 110);
     d->v[P_O2_PW] = (uint8_t)rn(10, 110);
     d->v[P_O2_LVL] = (uint8_t)rn(60, 127);
@@ -747,7 +764,7 @@ static void param_value(char *s, uint32_t p, uint32_t v)   /* <= 7 characters */
     switch (PDEF[p].kind) {
     case K_BIP: if (v < 64u) { scat(s, "-"); fmt_u(t, 64u - v); } else { scat(s, v > 64u ? "+" : ""); fmt_u(t, v - 64u); } scat(s, t); break;
     case K_ONOFF: scat(s, v ? "ON" : "OFF"); break;
-    case K_WAVE: scat(s, WAVE_NAME[v & 3u]); break;
+    case K_WAVE: scat(s, WAVE_NAME[v % NWAVE]); break;
     case K_FTYPE: scat(s, FTYPE_NAME[v % NFTYPE]); break;
     case K_MODE: scat(s, MODE_NAME[v & 3u]); break;
     case K_LSHAPE: scat(s, LSHAPE_NAME[v % 6u]); break;
@@ -930,7 +947,7 @@ static void draw_page(void)
             seq_knob(&k[i], i);
         } else if (p >= 0) {
             k[i].label = PDEF[p].name;
-            k[i].v = ed_patch((uint32_t)p)->v[p];
+            k[i].v = param_pos((uint32_t)p, ed_patch((uint32_t)p)->v[p]);
             k[i].max = PDEF[p].max;
             k[i].bip = PDEF[p].kind == K_BIP || PDEF[p].kind == K_SEMI || PDEF[p].kind == K_MORPH;
             k[i].present = 1;
@@ -1911,7 +1928,7 @@ static void midi_in(uint32_t notes_only)
                                                  * bend: these channels ignored it) */
             else if (kind == 0xB0u && cc_map[d1]) {
                 uint32_t p = cc_map[d1] - 1u;
-                if (!is_a_only(p)) set_param_in(&live_p[t], p, PDEF[p].max == 127 ? (int32_t)d2 : ((int32_t)d2 * PDEF[p].max + 63) / 127);
+                if (!is_a_only(p)) set_param_in(&live_p[t], p, param_cc(p, d2));
                 dirty_page = dirty_hdr = 1;
             }
             continue;
@@ -1935,7 +1952,7 @@ static void midi_in(uint32_t notes_only)
             else if (d1 == 120u || d1 == 123u) ctl_panic = 1;
             else if (cc_map[d1]) {
                 uint32_t p = cc_map[d1] - 1u;
-                set_param(p, PDEF[p].max == 127 ? (int32_t)d2 : ((int32_t)d2 * PDEF[p].max + 63) / 127);
+                set_param(p, param_cc(p, d2));
                 auto_rec(p);
                 if (p == P_CUTOFF) cut_shown_t = fm1_ms + 1u;
                 dirty_page = dirty_hdr = 1;
@@ -2405,7 +2422,7 @@ static void app_main(void)
                 dirty_steps = 1;
             } else if (p >= 0) {
                 int32_t step = PDEF[p].max >= 100 ? 2 : 1;
-                set_param((uint32_t)p, (int32_t)ed_patch((uint32_t)p)->v[p] + e * step);
+                set_param((uint32_t)p, param_at((uint32_t)p, (int32_t)param_pos((uint32_t)p, ed_patch((uint32_t)p)->v[p]) + e * step));
                 auto_rec((uint32_t)p);
                 if (p == P_MODE || p == P_FTYPE || p == P_ARP_MODE || p >= P_CHO_RATE) dirty_tags = 1;
                 dirty_hdr = 1;
@@ -2780,5 +2797,10 @@ static void host_patches(void)                  /* (tests/host.c "patches"): the
                 for (k = 0; k < PATCH_BYTES; k++) printf("%02x", psnd[i].p[t].v[k]);
                 printf("\n");
             }
+    for (t = 0; t < NTRK; t++) {                /* the sounds playing now */
+        printf("%6u ms  LIVE %u ", fm1_ms, t);
+        for (k = 0; k < PATCH_BYTES; k++) printf("%02x", live_p[t].v[k]);
+        printf("\n");
+    }
 }
 #endif

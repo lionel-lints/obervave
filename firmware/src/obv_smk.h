@@ -225,7 +225,7 @@ static void smk_faders(uint32_t *dirty_page, uint32_t *dirty_hdr, uint32_t *dirt
         if (v == smk_fad_last[i]) continue;
         smk_fad_last[i] = (uint8_t)v;
         if (p >= 0) {
-            set_param((uint32_t)p, (int32_t)(v * PDEF[p].max + 63u) / 127);
+            set_param((uint32_t)p, param_cc((uint32_t)p, v));
             auto_rec((uint32_t)p);              /* REC running: a fader's moves are recorded, as a knob's (one of the four lanes) */
             param_value(val, (uint32_t)p, ed_patch((uint32_t)p)->v[p]);
             if (p == P_CUTOFF) cut_shown_t = fm1_ms + 1u;

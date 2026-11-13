@@ -1,0 +1,15 @@
+# the triangle under the sanitizers: both oscillators TRI, hard sync swept by the filter envelope, X-MOD, high and low notes
+3000 midi 0xC0 98 0
+3050 midi 0xB0 20 127
+3050 midi 0xB0 24 127
+3050 midi 0xB0 28 127
+3050 midi 0xB0 30 120
+3050 midi 0xB0 29 60
+3100 midi 0x90 36 100
+3100 midi 0x90 108 100
+3600 midi 0xB0 29 127
+3900 midi 0x90 127 100
+4200 midi 0x80 36 0
+4200 midi 0x80 108 0
+4200 midi 0x80 127 0
+5000 end

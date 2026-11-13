@@ -36,8 +36,11 @@ enum { K_NUM, K_BIP, K_ONOFF, K_WAVE, K_FTYPE, K_MODE, K_LSHAPE, K_LPHASE, K_TO,
 /* LFO 2's destinations: what LFO 1 reaches and what it does not (resonance, pan, morph, cross-mod, noise, LFO 1 itself) */
 enum { L2_OFF, L2_PITCH, L2_OSC2, L2_PWM, L2_CUTOFF, L2_RESO, L2_AMP, L2_PAN, L2_MORPH, L2_XMOD, L2_NOISE, L2_L1RATE,
        L2_L1DEPTH, NL2DEST };
-enum { W_OFF, W_SAW, W_PLS, W_BOTH };
+enum { W_OFF, W_SAW, W_PLS, W_BOTH, W_TRI, NWAVE };   /* (W_TRI = OSC_TRI: the value is the mask) */
 enum { F_LP12, F_HP12, F_BP12, F_NOTCH, F_LP24, F_SEM, NFTYPE };   /* SEM: LP .. notch .. HP by MORPH */
+/* the order a knob, a fader or CC 34 steps through them: low-pass to high-pass, then SEM's sweep of them all (the
+ * stored values stay as they were: old patches keep their filter) */
+static const uint8_t FT_ORDER[NFTYPE] = {F_LP24, F_LP12, F_BP12, F_NOTCH, F_HP12, F_SEM};
 enum { M_POLY, M_DUAL, M_UNISON, M_MONO };
 enum { L_TRI, L_SAW, L_RAMP, L_SQR, L_SH, L_RND };
 enum { LP_SYNC, LP_FREE, LP_SPREAD };
@@ -51,11 +54,11 @@ typedef struct {
     uint8_t max, def, kind, cc;                 /* cc: a fixed MIDI CC, 0 = taken from 20 up in table order */
 } pdef_t;
 static const pdef_t PDEF[NPARAM] = {
-    [P_O1_WAVE] = {"WAVE", 3, W_SAW, K_WAVE, 0},
+    [P_O1_WAVE] = {"WAVE", NWAVE - 1, W_SAW, K_WAVE, 0},
     [P_O1_PW] = {"PW", 127, 64, K_PCT, 0},
     [P_O1_LVL] = {"LEVEL", 127, 110, K_NUM, 0},
     [P_NOISE] = {"NOISE", 127, 0, K_NUM, 0},
-    [P_O2_WAVE] = {"WAVE", 3, W_SAW, K_WAVE, 0},
+    [P_O2_WAVE] = {"WAVE", NWAVE - 1, W_SAW, K_WAVE, 0},
     [P_O2_PW] = {"PW", 127, 64, K_PCT, 0},
     [P_O2_LVL] = {"LEVEL", 127, 100, K_NUM, 0},
     [P_O2_SEMI] = {"SEMI", 48, 24, K_SEMI, 0},
@@ -123,7 +126,7 @@ static const pdef_t PDEF[NPARAM] = {
     [P_L2_AMT2] = {"AMT 2", 127, 64, K_BIP, 0},
 };
 
-static const char *const WAVE_NAME[4] = {"OFF", "SAW", "PULSE", "SAW+PLS"};
+static const char *const WAVE_NAME[NWAVE] = {"OFF", "SAW", "PULSE", "SAW+PLS", "TRI"};
 static const char *const FTYPE_NAME[NFTYPE] = {"LP 12", "HP 12", "BP 12", "NOTCH", "LP 24", "SEM"};
 static const char *const MODE_NAME[4] = {"POLY", "DUAL", "UNISON", "MONO"};
 static const char *const LSHAPE_NAME[6] = {"TRI", "SAW", "RAMP", "SQUARE", "S&H", "RANDOM"};

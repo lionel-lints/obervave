@@ -38,6 +38,8 @@ $CC -Ifirmware/hal -o "$OUT/smk_key_test" tests/smk_key_test.c
 run "SMK-37 keybed: fast, medium and slow presses (a slow one plays after 40 ms, once; genkigenki)" "$OUT/smk_key_test"
 run "OSC 2 its own vintage walk: locked at VINTAGE 0, the two beat as VINTAGE rises, no lasting pull" python3 tests/osc_drift_test.py
 run "a page button stays lit on every page it cycles (HOME: PERFORM and the MIXER rows; EDIT, ENV, LFO, FX, GLO)" python3 tests/btn_led_test.py
+run "the triangle: odd harmonics at 1/n^2, aliases under -65 dB below 12 kHz at C7 (naive -48), the saw's level, bounded synced" python3 tests/tri_test.py
+run "the filter TYPE steps LP 24, LP 12, BP 12, NOTCH, HP 12, SEM on the knob and CC 34; saved sounds keep theirs" python3 tests/ftype_order_test.py
 run "the wheels glide: a slow bend in steps under 0.5 cent (was ~3), a flick still there in ~50 ms, the rest exact; the mod wheel too" python3 tests/bend_test.py
 run "LFO 2: every destination moves what it says (pitch, OSC 2, PWM, cutoff, reso, amp, pan, morph, x-mod, noise, LFO 1), two slots add, DELAY holds" python3 tests/lfo2_test.py
 run "LFO 2 and the patches saved before it: programs and pattern sounds come through, names kept, LFO 2 off, the pattern bit for bit" python3 tests/lfo2_store_test.py

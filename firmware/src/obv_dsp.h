@@ -63,6 +63,7 @@ typedef struct {
 
 #define OSC_SAW 1u
 #define OSC_PLS 2u
+#define OSC_TRI 4u                              /* (alone: W_TRI; its corners are bent by osc_corner, polyBLAMP) */
 
 static inline __attribute__((always_inline)) int32_t osc_naive(uint32_t ph, uint32_t pw, uint32_t wave)   /* -98304 .. 98303 */
 {
@@ -71,7 +72,20 @@ static inline __attribute__((always_inline)) int32_t osc_naive(uint32_t ph, uint
         v = (int32_t)(ph >> 16) - 32768;
     if (wave & OSC_PLS)                         /* saw(ph) - saw(ph + pw): a pulse with mean 0 */
         v += (int32_t)(ph >> 16) - (int32_t)((ph + pw) >> 16);
+    if (wave & OSC_TRI) {                       /* +32768 at phase 0, -32768 at half: the saw's level (RMS) */
+        int32_t u = (int32_t)(ph >> 15) - 65536;
+        v += (u < 0 ? -u : u) - 32768;
+    }
     return v;
+}
+
+/* a corner: the slope changes by S (per sample) at t (0..32767) before the current sample; polyBLAMP, the
+ * integral of osc_event's polyBLEP: (1 - |x|)^3 / 6 either side. The triangle's slope is +-d, a corner 2d */
+static inline __attribute__((always_inline)) void osc_corner(int32_t *prev, int32_t *cur, int32_t s, int32_t t)
+{
+    int32_t u = 32767 - t, t3 = (((t * t) >> 15) * t) >> 15, u3 = (((u * u) >> 15) * u) >> 15;
+    *prev += ((int32_t)(((int64_t)s * t3) >> 15) * 5461) >> 15;   /* (5461 / 32768 = 1/6) */
+    *cur += ((int32_t)(((int64_t)s * u3) >> 15) * 5461) >> 15;
 }
 
 /* the event: a jump of H (any size up to +-200000) at t (0..32767) before the current sample */
@@ -93,10 +107,14 @@ static inline __attribute__((always_inline)) int32_t osc_step(osc_t *o, uint32_t
     int32_t cur, out = o->prev;
     if (reset_t < 0 || !d) {
         cur = osc_naive(ph, pw, wave);
-        if (ph < inc && d)                      /* wrapped: the saw(s) drop */
+        if (ph < inc && d && hw)                /* wrapped: the saw(s) drop */
             osc_event(&out, &cur, hw, (int32_t)(ph / d));
         if ((wave & OSC_PLS) && ph + pw < inc && d)   /* the subtracted saw wraps: the pulse rises */
             osc_event(&out, &cur, 65536, (int32_t)((ph + pw) / d));
+        if ((wave & OSC_TRI) && d) {            /* the triangle's top (phase 0) and bottom (half) */
+            if (ph < inc) osc_corner(&out, &cur, -2 * (int32_t)d, (int32_t)(ph / d));
+            else if (ph - 0x80000000u < inc) osc_corner(&out, &cur, 2 * (int32_t)d, (int32_t)((ph - 0x80000000u) / d));
+        }
     } else {
         uint32_t at = ph - d * (uint32_t)reset_t;   /* the phase at the reset instant */
         int32_t t;
@@ -109,6 +127,17 @@ static inline __attribute__((always_inline)) int32_t osc_step(osc_t *o, uint32_t
         if ((wave & OSC_PLS) && at + pw < old + pw) {   /* ph + pw wrapped on the way to the reset */
             t = (int32_t)((at + pw) / d) + reset_t;
             osc_event(&out, &cur, 65536, t > 32767 ? 32767 : t);
+        }
+        if (wave & OSC_TRI) {                   /* corners on the way to the reset, then the slope's turn at it */
+            if (at < old) {
+                t = (int32_t)(at / d) + reset_t;
+                osc_corner(&out, &cur, -2 * (int32_t)d, t > 32767 ? 32767 : t);
+            } else if (at - 0x80000000u < at - old) {
+                t = (int32_t)((at - 0x80000000u) / d) + reset_t;
+                osc_corner(&out, &cur, 2 * (int32_t)d, t > 32767 ? 32767 : t);
+            }
+            if (at >= 0x80000000u)              /* rising into the reset, falling after it */
+                osc_corner(&out, &cur, -2 * (int32_t)d, reset_t);
         }
         osc_event(&out, &cur, osc_naive(0, pw, wave) - osc_naive(at, pw, wave), reset_t);
     }
