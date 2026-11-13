@@ -2273,7 +2273,8 @@ static void app_main(void)
             else if (page == PG_PERFORM) { np = PG_MIXER; mix_row = 0; }   /* again: the MIXER (VIBE's F1) */
             else if (page == PG_MIXER) {        /* there: its next row */
                 static const char *const MR[7] = {"LEVEL", "PAN", "SEND CHORUS", "SEND DELAY", "SEND REVERB", "SEND DRIVE", "MASTER"};
-                mix_row = (mix_row + 1u) % 7u; say(MR[mix_row]); dirty_page = dirty_steps = 1;
+                if (mix_row + 1u >= 7u) np = PG_PERFORM;   /* after MASTER: round to PERFORM again (it wrapped to LEVEL) */
+                else { mix_row++; say(MR[mix_row]); dirty_page = dirty_steps = 1; }
             }
             else np = PG_PERFORM;
         }

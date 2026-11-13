@@ -86,7 +86,7 @@ while a layer is held locks it open; its button lets it go.
   the MIXER the next pattern (on the bar), elsewhere the tempo; **SELECT held** in STEPS shows STEP+, pressed on
   GLOBAL it switches SYNC (AUTO: a MIDI clock leads; INTERNAL: ignored). **OCT- / OCT+** the octave (both: 0).
 - **HOME** PERFORM (CUTOFF, RESO, ENV AMT, RELEASE); again: the **MIXER**; there, again: its next row (LEVEL, PAN,
-  SEND CHORUS, SEND DELAY, SEND REVERB, SEND DRIVE, MASTER). KNOB 1-4 are tracks A-D in the row (MASTER: VOLUME, DJ
+  SEND CHORUS, SEND DELAY, SEND REVERB, SEND DRIVE, MASTER), then PERFORM again. KNOB 1-4 are tracks A-D in the row (MASTER: VOLUME, DJ
   FILTER, DRIVE, COMP); under them each track's level, a meter, PLAY / STOP and its mute and solo.
 - **PLAY** starts the tracks that are on from step 1 / stops (the light flashes on the beat). **REC** playing:
   record the chosen track now / stop; stopped: armed, the first note starts (CLICK on COUNT-IN: PLAY counts in a
